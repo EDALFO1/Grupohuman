@@ -1,6 +1,5 @@
 @extends('layouts.main')
 
-@section('titulo', 'Usuarios por Período')
 
 @section('contenido')
 <main id="main" class="main">
@@ -17,7 +16,7 @@
       </select>
     </div>
     <div class="col-md-3">
-      <label class="form-label">Período (YYYY-MM)</label>
+      <label class="form-label">Período</label>
       <input type="month" name="periodo" value="{{ $periodo }}" class="form-control" onchange="this.form.submit()">
     </div>
     <div class="col-md-3">
@@ -26,6 +25,18 @@
         <option value="">Todos</option>
         <option value="Activo"   {{ $estado==='Activo'?'selected':'' }}>Activo</option>
         <option value="Retirado" {{ $estado==='Retirado'?'selected':'' }}>Retirado</option>
+      </select>
+    </div>
+
+    {{-- NUEVO: Por página --}}
+    <div class="col-md-2">
+      <label class="form-label">Por página</label>
+      <select name="per_page" class="form-select" onchange="this.form.submit()">
+        @foreach([10,20,50,100] as $n)
+          <option value="{{ $n }}" {{ (int)request('per_page', $perPage ?? 20) === $n ? 'selected' : '' }}>
+            {{ $n }}
+          </option>
+        @endforeach
       </select>
     </div>
   </form>
@@ -71,8 +82,33 @@
         </tbody>
       </table>
     </div>
-  </div>
 
-  <div class="mt-3">{{ $items->links() }}</div>
+    
+        {{-- Footer de paginación inline (sin componente) --}}
+    @php
+        $first = $items->firstItem() ?? 0;
+        $last  = $items->lastItem()  ?? 0;
+        $total = method_exists($items, 'total') ? (int) $items->total() : null;
+        $nf    = fn($n) => number_format((int) $n, 0, ',', '.');
+    @endphp
+
+    @if($items instanceof \Illuminate\Pagination\Paginator || $items instanceof \Illuminate\Pagination\LengthAwarePaginator)
+      <div class="card-footer d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+        <div class="small text-muted">
+          @if(!is_null($total))
+            Mostrando <strong>{{ $nf($first) }}</strong>–<strong>{{ $nf($last) }}</strong>
+            de <strong>{{ $nf($total) }}</strong> registros
+          @else
+            Página <strong>{{ $items->currentPage() }}</strong>
+          @endif
+        </div>
+        <div>
+          {{ $items->onEachSide(1)->links() }}
+        </div>
+      </div>
+    @endif
+
+
+  </div>
 </main>
 @endsection

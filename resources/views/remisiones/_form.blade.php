@@ -353,6 +353,45 @@
     const dias = diasMesBase30(usuarioCargado.fecha_afiliacion, fechaRemision, fechaRetiro);
     calcularValores(usuarioCargado, dias);
   });
+
+  document.getElementById('fecha_retiro').addEventListener('change', function () {
+    if (!usuarioCargado) return;
+
+    const fechaRetiroStr = this.value || null;
+    const fechaRemision  = document.querySelector('input[name="fecha"]').value;
+    if (!fechaRetiroStr || !fechaRemision) return;
+
+    const fRet  = parseLocalDate(fechaRetiroStr);
+    const fRem  = parseLocalDate(fechaRemision);
+    const fAf   = parseLocalDate(usuarioCargado.fecha_afiliacion);
+
+    // Mes base-30: mes ANTERIOR a la remisión
+    const inicioMes = new Date(fRem.getFullYear(), fRem.getMonth() - 1, 1);
+    const finMes    = new Date(fRem.getFullYear(), fRem.getMonth() - 1, 30); // base-30
+
+    // Regla existente: retiro debe estar en el mes anterior (1..30)
+    if (fRet < inicioMes || fRet > finMes) {
+      alert('⚠️ La fecha de retiro debe estar dentro del mes anterior a la remisión (1..30).');
+      this.value = '';
+      const dias = diasMesBase30(usuarioCargado.fecha_afiliacion, fechaRemision, null);
+      calcularValores(usuarioCargado, dias);
+      return;
+    }
+
+    // 🚫 NUEVO: si la afiliación está en ese mismo mes base, no permitir retiro < afiliación
+    const sameYm = fAf && (fAf.getFullYear() === inicioMes.getFullYear()) && (fAf.getMonth() === inicioMes.getMonth());
+    if (sameYm && fRet < fAf) {
+      alert(`⚠️ La fecha de retiro no puede ser anterior a la fecha de afiliación (${toYMD(usuarioCargado.fecha_afiliacion)}).`);
+      this.value = '';
+      const dias = diasMesBase30(usuarioCargado.fecha_afiliacion, fechaRemision, null);
+      calcularValores(usuarioCargado, dias);
+      return;
+    }
+
+    // OK: recalcular con retiro válido
+    const dias = diasMesBase30(usuarioCargado.fecha_afiliacion, fechaRemision, fechaRetiroStr);
+    calcularValores(usuarioCargado, dias);
+  });
 </script>
 
 

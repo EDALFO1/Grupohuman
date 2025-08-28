@@ -1,6 +1,5 @@
 <?php
 
-// app/Http/Controllers/PeriodoUsuarioController.php
 namespace App\Http\Controllers;
 
 
@@ -14,75 +13,76 @@ use Illuminate\Http\Request;
 
 class PeriodoUsuarioController extends Controller
 {
-    public function index(Request $request)   
-   {
-    $empresaId = (int) ($request->input('empresa_local_id') ?: session('empresa_local_id'));    // si no viene ?periodo=..., usar el SIGUIENTE mes
-    $periodo   = $request->input('periodo') ?: now()->addMonthNoOverflow()->format('Y-m');           
-    $estado    = $request->input('estado'); // 'Activo' | 'Retirado' | null
+   public function index(Request $request)
+    {
+        $empresaId = (int) ($request->input('empresa_local_id') ?: session('empresa_local_id'));
+        $periodo   = $request->input('periodo') ?: now()->addMonthNoOverflow()->format('Y-m');
+        $estado    = $request->input('estado');
 
-    $query = PeriodoUsuario::with(['usuarioExterno','empresaLocal'])
-        ->when($empresaId, fn($q)=>$q->deEmpresa($empresaId))
-        ->periodo($periodo)
-        ->when($estado, fn($q)=>$q->where('estado', $estado))
-        ->orderBy('estado')
-        ->orderByDesc('id');
+        // NUEVO: per_page
+        $allowed  = [10, 20, 50, 100];
+        $perPage  = (int) $request->input('per_page', 20);
+        if (!in_array($perPage, $allowed, true)) { $perPage = 20; }
 
-    $items    = $query->paginate(20)->appends($request->query());
-    $empresas = EmpresaLocal::orderBy('nombre')->get();
+        $query = PeriodoUsuario::with(['usuarioExterno','empresaLocal'])
+            ->when($empresaId, fn($q)=>$q->deEmpresa($empresaId))
+            ->periodo($periodo)
+            ->when($estado, fn($q)=>$q->where('estado', $estado))
+            ->orderBy('estado')
+            ->orderByDesc('id');
 
-    return view('periodos.index', compact('items','empresas','empresaId','periodo','estado'));
+        $items    = $query->paginate($perPage)->appends($request->query());
+        $empresas = EmpresaLocal::orderBy('nombre')->get();
+
+        return view('periodos.index', compact('items','empresas','empresaId','periodo','estado','perPage'));
     }
-
     // app/Http/Controllers/PeriodoUsuarioController.php
 
-    public function pendientes(Request $request)
-{
-    $empresaId = (int)($request->input('empresa_local_id') ?: session('empresa_local_id'));
-    $periodo   = $request->input('periodo') ?: now()->format('Y-m'); // YYYY-MM
+     public function pendientes(Request $request)
+    {
+        $empresaId = (int)($request->input('empresa_local_id') ?: session('empresa_local_id'));
+        $periodo   = $request->input('periodo') ?: now()->format('Y-m');
 
-    // Rango del MES ANTERIOR al que se liquida (para inferir activos)
-    // Ej: periodo=2025-09 ⇒ prevStart=2025-08-01, prevEnd=2025-08-31
-    $anchor    = Carbon::createFromFormat('Y-m-d', "{$periodo}-01");
-    $prevStart = $anchor->copy()->subMonthNoOverflow()->startOfMonth()->toDateString();
-    $prevEnd   = $anchor->copy()->subMonthNoOverflow()->endOfMonth()->toDateString();
+        // NUEVO: per_page
+        $allowed  = [10, 20, 50, 100];
+        $perPage  = (int) $request->input('per_page', 20);
+        if (!in_array($perPage, $allowed, true)) { $perPage = 20; }
 
-    // A) IDs desde periodo_usuarios
-    $idsA = PeriodoUsuario::query()
-        ->when($empresaId, fn($q)=>$q->where('empresa_local_id', $empresaId))
-        ->where('periodo', $periodo)
-        ->where('estado', 'Activo')
-        ->pluck('usuario_externo_id');
+        $anchor    = \Carbon\Carbon::createFromFormat('Y-m-d', "{$periodo}-01");
+        $prevStart = $anchor->copy()->subMonthNoOverflow()->startOfMonth()->toDateString();
+        $prevEnd   = $anchor->copy()->subMonthNoOverflow()->endOfMonth()->toDateString();
 
-    // B) IDs inferidos por fechas en usuario_externos
-    //    (afiliado hasta fin del mes anterior y sin retiro previo a ese mes)
-    $idsB = UsuarioExterno::query()
-        ->when($empresaId, fn($q)=>$q->where('empresa_local_id', $empresaId))
-        ->whereDate('fecha_afiliacion', '<=', $prevEnd)
-        ->where(function ($q) use ($prevStart) {
-            $q->whereNull('fecha_retiro')
-              ->orWhereDate('fecha_retiro', '>=', $prevStart);
-        })
-        ->pluck('id');
+        $idsA = PeriodoUsuario::query()
+            ->when($empresaId, fn($q)=>$q->where('empresa_local_id', $empresaId))
+            ->where('periodo', $periodo)
+            ->where('estado', 'Activo')
+            ->pluck('usuario_externo_id');
 
-    $idsCandidatos = $idsA->merge($idsB)->unique()->values();
+        $idsB = UsuarioExterno::query()
+            ->when($empresaId, fn($q)=>$q->where('empresa_local_id', $empresaId))
+            ->whereDate('fecha_afiliacion', '<=', $prevEnd)
+            ->where(function ($q) use ($prevStart) {
+                $q->whereNull('fecha_retiro')->orWhereDate('fecha_retiro', '>=', $prevStart);
+            })
+            ->pluck('id');
 
-    // Listado final: usuarios candidatos SIN recibo en ese Y-m
-    $items = UsuarioExterno::with(['empresaLocal'])
-        ->whereIn('id', $idsCandidatos)
-        ->whereNotExists(function ($sub) use ($periodo) {
-            $sub->selectRaw(1)
-                ->from('recibos as r')
-                ->whereColumn('r.empresa_local_id', 'usuario_externos.empresa_local_id')
-                ->whereColumn('r.usuario_externo_id', 'usuario_externos.id')
-                ->whereRaw("DATE_FORMAT(r.fecha, '%Y-%m') = ?", [$periodo]);
-        })
-        ->orderByDesc('id')
-        ->paginate(20)
-        ->appends($request->query());
+        $idsCandidatos = $idsA->merge($idsB)->unique()->values();
 
-    $empresas = EmpresaLocal::orderBy('nombre')->get();
+        $items = UsuarioExterno::with(['empresaLocal'])
+            ->whereIn('id', $idsCandidatos)
+            ->whereNotExists(function ($sub) use ($periodo) {
+                $sub->selectRaw(1)->from('recibos as r')
+                    ->whereColumn('r.empresa_local_id', 'usuario_externos.empresa_local_id')
+                    ->whereColumn('r.usuario_externo_id', 'usuario_externos.id')
+                    ->whereRaw("DATE_FORMAT(r.fecha, '%Y-%m') = ?", [$periodo]);
+            })
+            ->orderByDesc('id')
+            ->paginate($perPage)
+            ->appends($request->query());
 
-    return view('periodos.pendientes', compact('items','empresas','empresaId','periodo'));
+        $empresas = EmpresaLocal::orderBy('nombre')->get();
+
+        return view('periodos.pendientes', compact('items','empresas','empresaId','periodo','perPage'));
     }
 
 

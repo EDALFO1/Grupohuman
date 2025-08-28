@@ -11,7 +11,7 @@
 
     <li class="nav-item">
       <a class="nav-link collapsed" data-bs-target="#components-nav" data-bs-toggle="collapse" href="#">
-        <i class="fa-solid fa-folder-open"></i></i><span>Documentos</span><i class="bi bi-chevron-down ms-auto"></i>
+        <i class="fa-solid fa-folder-open"></i></i><span>Administrativo</span><i class="bi bi-chevron-down ms-auto"></i>
       </a>
       
       <ul id="components-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
@@ -22,10 +22,11 @@
           </a>
         </li>
         <li>
-          <a href="{{ route ('recibos')}}">
-            <i class="bi bi-book" style="font-size: 1em;"></i><span>Crear Recibos</span>
-          </a>
-        </li>
+      <a href="{{ route('usuario_externos') }}">
+        <i class="bi bi-person-gear" style="font-size: 1em;"></i><span>Afiliados externos</span>
+      </a>
+    </li>
+       
         
         
       </ul>
@@ -33,7 +34,7 @@
     
 <li class="nav-item">
   <a class="nav-link collapsed" data-bs-target="#varios-nav" data-bs-toggle="collapse" href="#">
-    <i class="fa-solid fa-user-tie"></i><span>Administrativo</span><i class="bi bi-chevron-down ms-auto"></i>
+    <i class="fa-solid fa-user-tie"></i><span>Financiero</span><i class="bi bi-chevron-down ms-auto"></i>
   </a>
 
   @php
@@ -43,30 +44,23 @@
   @endphp
 
   <ul id="varios-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-    <li>
-      <a href="{{ route('usuario_externos') }}">
-        <i class="bi bi-person-gear" style="font-size: 1em;"></i><span>Afiliados externos</span>
-      </a>
-    </li>
+     <li>
+          <a href="{{ route ('recibos')}}">
+            <i class="bi bi-book" style="font-size: 1em;"></i><span>Crear Recibos</span>
+          </a>
+        </li>
+    
 
     {{-- Usuarios marcados para el SIGUIENTE período (no pasamos empresa; el controlador usa la de sesión) --}}
     <li>
       <a href="{{ route('periodos.index', ['periodo' => $periodoSiguiente]) }}">
-        <i class="bi bi-people" style="font-size: 1em;"></i><span>Usuarios siguiente período ({{ $periodoSiguiente }})</span>
+        <i class="bi bi-people" style="font-size: 1em;"></i><span>Activos siguiente período ({{ $periodoSiguiente }})</span>
       </a>
     </li>
 
 
 
-   <li>
-  <a href="{{ route('excel.usuarios_vigentes.descargar', [
-        'empresa_local_id' => session('empresa_local_id'),
-        'periodo' => now()->format('Y-m')
-      ]) }}">
-    <i class="bi bi-file-earmark-excel" style="font-size: 1em;"></i>
-    <span>Exportar usuarios vigentes</span>
-  </a>
-</li>
+  
 
 
 
@@ -87,6 +81,16 @@
         <i class="bi bi-person-dash" style="font-size: 1em;"></i><span>Retiros masivos (pendientes)</span>
       </a>
     </li>
+
+     <li>
+  <a href="{{ route('excel.usuarios_vigentes.descargar', [
+        'empresa_local_id' => session('empresa_local_id'),
+        'periodo' => now()->format('Y-m')
+      ]) }}">
+    <i class="bi bi-file-earmark-excel" style="font-size: 1em;"></i>
+    <span>Exportar usuarios vigentes </span>
+  </a>
+</li>
   </ul>
 </li>
 

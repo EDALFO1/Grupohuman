@@ -17,10 +17,10 @@ use App\Exports\UsuarioExternosTemplateExport;
 class UsuarioExternoController extends Controller
 {
     public function index(Request $request)
-    {
+{
     $empresaLocalId = session('empresa_local_id');
 
-    // Tamaño de página permitido
+    // Tamaños de página permitidos
     $allowed = [10, 25, 50, 100, 200];
     $perPage = $request->integer('per_page', 10);
     if (!in_array($perPage, $allowed, true)) {
@@ -33,10 +33,10 @@ class UsuarioExternoController extends Controller
         ->when(!$request->boolean('all') && $empresaLocalId, fn($q) => $q->deEmpresa($empresaLocalId))
         ->orderBy('id', 'desc')
         ->paginate($perPage)
-        ->appends($request->only(['all','per_page'])); // conserva ?all y ?per_page
+        ->appends($request->query()); // preserva TODOS los parámetros de la URL
 
     return view('usuario_externos.index', compact('usuarios'));
-    }
+}
 
 
     public function create()

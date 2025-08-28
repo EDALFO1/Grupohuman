@@ -18,7 +18,7 @@
       </select>
     </div>
     <div class="col-md-3">
-      <label class="form-label">Período (YYYY-MM)</label>
+      <label class="form-label">Período </label>
       <input type="month" name="periodo" class="form-control" value="{{ $periodo }}" onchange="this.form.submit()">
     </div>
     <div class="col-md-6 d-flex align-items-end">
