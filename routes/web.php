@@ -15,6 +15,7 @@ use App\Http\Controllers\{
     EpsController,
     FacturaController,
     PensionController,
+    PeriodoUsuarioController,
     ProductoController,
     ReciboController,
     SubtipoCotizanteController,
@@ -96,11 +97,6 @@ Route::get('/excel/usuarios-vigentes', [\App\Http\Controllers\UsuariosVigentesEx
     Route::post('/liquidaciones/descargar-por-caja', 
     [\App\Http\Controllers\LiquidacionesExcelController::class, 'descargarPorCaja']
 )->name('liquidaciones.descargar_por_caja');
-
-
-
-
-
 
     /*
     |--------------------------------------------------------------------------
