@@ -50,6 +50,10 @@
                            href="{{ route('exportaciones.descargar', $batch) }}">
                           Descargar Excel
                         </a>
+                        <a class="btn btn-sm btn-success ms-1"
+                           href="{{ route('exportaciones.descargarPorCaja', $batch) }}">
+                          Descargar ZIP por caja
+                        </a>
                       </td>
                     </tr>
                   @endforeach

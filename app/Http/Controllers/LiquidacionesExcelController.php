@@ -592,11 +592,17 @@ public function descargarPorCaja(Request $request): \Symfony\Component\HttpFound
         \App\Models\Recibo::whereIn('id', $idsExportados)
             ->whereNull('export_batch_id')
             ->update(['export_batch_id' => $batch->id]);
+
+        // 🔁 RESET CONTADOR (si lo llevas en Session/Cache)
+        // Ajusta la clave si usas otro nombre
+        session()->forget('recibos_guardados');    // o: session()->put('recibos_guardados', 0);
+        cache()->forget('recibos_guardados');      // si usas cache
     });
 
     // Descargar y eliminar archivo temporal
     return response()->download($tmpZip, $zipName)->deleteFileAfterSend(true);
 }
+
 
 
 /** Normaliza nombre de caja: minúsculas, sin tildes, sin espacios extras */
@@ -620,5 +626,163 @@ private function xlsxToString(\PhpOffice\PhpSpreadsheet\Spreadsheet $spreadsheet
     $writer->save('php://output');
     return (string) ob_get_clean();
 }
+public function prepararExportacionPorCaja(Request $request)
+{
+    $request->validate([
+        'empresa_local_id' => ['required', 'integer', 'exists:empresa_local,id'],
+        'periodo'          => ['required', 'regex:/^\d{4}-\d{2}($|-\d{2}$)/'],
+    ]);
+
+    $empresa = \App\Models\EmpresaLocal::with('documento')
+        ->findOrFail((int) $request->empresa_local_id);
+
+    // Período base
+    $dt = strlen($request->periodo) === 7
+        ? \Carbon\Carbon::createFromFormat('Y-m', $request->periodo)->startOfMonth()
+        : \Carbon\Carbon::parse($request->periodo)->startOfMonth();
+    $inicio = $dt->copy()->startOfMonth();
+    $fin    = $dt->copy()->endOfMonth();
+
+    if (!\Illuminate\Support\Facades\Schema::hasColumn('recibos', 'export_batch_id')) {
+        return back()->with('warning', 'Falta la columna export_batch_id. Ejecuta las migraciones.');
+    }
+
+    // Tomamos SOLO PENDIENTES
+    $pendientes = \App\Models\Recibo::whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+        ->where('empresa_local_id', $empresa->id)
+        ->whereNull('export_batch_id')
+        ->pluck('id');
+
+    if ($pendientes->isEmpty()) {
+        return back()->with('info', "No hay recibos PENDIENTES para {$empresa->nombre} en el periodo {$request->periodo}.");
+    }
+
+    // Crear batch + marcar
+    $batch = \Illuminate\Support\Facades\DB::transaction(function () use ($pendientes, $empresa, $dt) {
+        // Agregados
+        $agg = \App\Models\Recibo::whereIn('id', $pendientes)
+            ->selectRaw('COUNT(*) c, COALESCE(SUM(total),0) s')
+            ->first();
+
+        // Detectar período homogéneo
+        $months = \App\Models\Recibo::whereIn('id', $pendientes)
+            ->selectRaw("DATE_FORMAT(fecha, '%Y-%m') as ym")
+            ->distinct()
+            ->pluck('ym');
+
+        $periodo = $months->count() === 1 ? $months->first() : $dt->format('Y-m');
+
+        // Crear ExportBatch
+        $batch = \App\Models\ExportBatch::create([
+            'empresa_local_id' => $empresa->id,
+            'codigo'           => 'ZIP-CAJA-' . now()->format('YmdHis'),
+            'periodo'          => $periodo,
+            'recibos_count'    => (int) ($agg->c ?? 0),
+            'total'            => (float) ($agg->s ?? 0),
+        ]);
+
+        // Marcar recibos
+        \App\Models\Recibo::whereIn('id', $pendientes)->update(['export_batch_id' => $batch->id]);
+
+        // 🔁 Reset de contador si lo llevas en sesión/cache
+        session()->forget('recibos_guardados');  // o: session()->put('recibos_guardados', 0);
+        cache()->forget('recibos_guardados');
+
+        return $batch;
+    });
+
+    // Fijar empresa en sesión para que el índice muestre lo recién creado
+    session(['empresa_local_id' => $empresa->id]);
+
+    return redirect()
+        ->route('exportaciones.index')
+        ->with('success', "Exportación por caja preparada (#{$batch->id}). Puedes descargar el ZIP desde aquí.");
+}
+public function descargarPorCajaLote(\App\Models\ExportBatch $batch): \Symfony\Component\HttpFoundation\Response
+{
+    $empresa = \App\Models\EmpresaLocal::with('documento')->findOrFail($batch->empresa_local_id);
+
+    // Cargar recibos del batch
+    $recibos = \App\Models\Recibo::with([
+            'usuarioExterno.documento',
+            'usuarioExterno.eps',
+            'usuarioExterno.arl',
+            'usuarioExterno.pension',
+            'usuarioExterno.caja',
+            'usuarioExterno.subtipoCotizante',
+        ])
+        ->where('export_batch_id', $batch->id)
+        ->orderBy('fecha')
+        ->get();
+
+    if ($recibos->isEmpty()) {
+        return back()->with('info', "El lote #{$batch->id} no tiene recibos.");
+    }
+
+    // Particionar por caja
+    $norm = fn(?string $s) => $this->normalizeCaja($s);
+    $esComfiar = function ($r) use ($norm) {
+        $nombre = $r->caja_nombre ?? ($r->usuarioExterno->caja->nombre ?? null);
+        return $norm($nombre) === 'comfiar';
+    };
+
+    $grupoComfiar = $recibos->filter($esComfiar)->values();
+    $grupoOtros   = $recibos->reject($esComfiar)->values();
+
+    $files = [];
+
+    if ($grupoComfiar->isNotEmpty()) {
+        $spreadsheet = $this->loadTemplate();
+        $sheet       = $this->getLiquidacionesSheet($spreadsheet);
+        // período referencia: del batch o del primer recibo del lote
+        $dt = $batch->periodo
+            ? \Carbon\Carbon::createFromFormat('Y-m', $batch->periodo)->startOfMonth()
+            : optional($grupoComfiar->first()?->fecha)?->copy()->startOfMonth() ?? now()->startOfMonth();
+
+        $this->llenarEncabezado($sheet, $empresa, $dt);
+        $this->llenarFilasDesdeRecibos($sheet, $grupoComfiar);
+
+        $files[] = [
+            'name' => sprintf('Liquidaciones_%s_%s_COMFIAR.xlsx', $empresa->id, $dt->format('Y-m')),
+            'data' => $this->xlsxToString($spreadsheet),
+        ];
+    }
+
+    if ($grupoOtros->isNotEmpty()) {
+        $spreadsheet = $this->loadTemplate();
+        $sheet       = $this->getLiquidacionesSheet($spreadsheet);
+        $dt = $batch->periodo
+            ? \Carbon\Carbon::createFromFormat('Y-m', $batch->periodo)->startOfMonth()
+            : optional($grupoOtros->first()?->fecha)?->copy()->startOfMonth() ?? now()->startOfMonth();
+
+        $this->llenarEncabezado($sheet, $empresa, $dt);
+        $this->llenarFilasDesdeRecibos($sheet, $grupoOtros);
+
+        $files[] = [
+            'name' => sprintf('Liquidaciones_%s_%s_OTRAS.xlsx', $empresa->id, $dt->format('Y-m')),
+            'data' => $this->xlsxToString($spreadsheet),
+        ];
+    }
+
+    if (empty($files)) {
+        return back()->with('info', 'No se encontraron archivos para generar el ZIP.');
+    }
+
+    // ZIP en memoria
+    $zipName = sprintf('Liquidaciones_%s_%s_por_caja.zip', $empresa->id, $batch->periodo ?: now()->format('Y-m'));
+    $tmpZip  = tempnam(sys_get_temp_dir(), 'zip');
+
+    $zip = new \ZipArchive();
+    if ($zip->open($tmpZip, \ZipArchive::OVERWRITE) !== true) {
+        abort(500, 'No fue posible crear el ZIP.');
+    }
+    foreach ($files as $f) {
+        $zip->addFromString($f['name'], $f['data']);
+    }
+    $zip->close();
+
+    return response()->download($tmpZip, $zipName)->deleteFileAfterSend(true);
+}
+
 
 }

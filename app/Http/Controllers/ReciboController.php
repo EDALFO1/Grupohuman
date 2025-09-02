@@ -23,44 +23,38 @@ use App\Models\PeriodoUsuario;
 
 class ReciboController extends Controller
 {
-    public function index()
-    {
-        $titulo = 'Listado de recibos';
+    public function index(Request $request)
+{
+    $empresaIdActual = (int) ($request->input('empresa_local_id') ?: session('empresa_local_id'));
+    $periodoActual   = $request->input('periodo') ?: now()->format('Y-m');
 
-        $empresas = EmpresaLocal::withCount('usuarioExterno')
-            ->having('usuario_externo_count', '>', 0)
-            ->orderBy('nombre')
-            ->get();
+    // Rango EXACTO del período seleccionado
+    $dt     = strlen($periodoActual) === 7
+        ? Carbon::createFromFormat('Y-m', $periodoActual)->startOfMonth()
+        : Carbon::parse($periodoActual)->startOfMonth();
+    $inicio = $dt->copy()->startOfMonth()->toDateString();
+    $fin    = $dt->copy()->endOfMonth()->toDateString();
 
-        $empresaIdActual = session('empresa_local_id');
-        if (!$empresaIdActual && $empresas->isNotEmpty()) {
-            $empresaIdActual = $empresas->first()->id;
-            session(['empresa_local_id' => $empresaIdActual]);
-        }
+    // Contador SOLO del mes visible y sólo pendientes (export_batch_id = NULL)
+    $pendientesCount = Recibo::where('empresa_local_id', $empresaIdActual)
+        ->whereNull('export_batch_id')
+        ->whereBetween('fecha', [$inicio, $fin])
+        ->count();
 
-        $recibos = Recibo::with(['usuarioExterno.documento', 'usuarioExterno.empresaLocal'])
-            ->deEmpresa($empresaIdActual)
-            ->latest('fecha')
-            ->paginate(15);
+    // Tu listado de recibos (recomendado: acotar también por el período visible)
+    $recibos = Recibo::with(['usuarioExterno'])
+        ->where('empresa_local_id', $empresaIdActual)
+        ->whereBetween('fecha', [$inicio, $fin])
+        ->orderBy('fecha', 'desc')
+        ->paginate(20);
 
-        $periodoActual   = now()->format('Y-m');
-        $empresaIdActual = $empresaIdActual ?? ($empresas->first()->id ?? null);
-
-        // ✅ Conteo de pendientes (solo si existe la columna)
-        $pendientesCount = 0;
-        if ($empresaIdActual && Schema::hasColumn('recibos', 'export_batch_id')) {
-            $pendientesCount = Recibo::deEmpresa($empresaIdActual)->pendientes()->count();
-        }
-
-        return view('recibos.index', compact(
-            'titulo',
-            'empresas',
-            'recibos',
-            'periodoActual',
-            'empresaIdActual',
-            'pendientesCount'
-        ));
-    }
+    return view('recibos.index', [
+        'empresaIdActual'  => $empresaIdActual,
+        'periodoActual'    => $periodoActual,
+        'pendientesCount'  => $pendientesCount,
+        'recibos'          => $recibos,
+    ]);
+}
 
     private function esIngresoMesAnterior(UsuarioExterno $usuario, string $fechaRecibo): bool
     {
@@ -78,6 +72,7 @@ class ReciboController extends Controller
     public function create()
     {
         return view('recibos.create');
+        
     }
 
     public function store(Request $request)
