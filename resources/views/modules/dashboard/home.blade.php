@@ -1,4 +1,4 @@
-@extends('Layouts.Main')
+@extends('layouts.main')
 <main id="main" class="main">
     <div class="pagetitle">
       <h1>Panel de control</h1>

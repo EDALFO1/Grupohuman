@@ -245,6 +245,12 @@ Route::middleware(['auth', SeleccionarEmpresaMiddleware::class])->group(function
         // Descargar plantilla de importación
         Route::get('/plantilla', [UsuarioExternoImportController::class, 'downloadTemplate'])
             ->name('usuario_externos.template');
+
+        Route::get('/usuario_externos/import', [UsuarioExternoImportController::class, 'showForm'])
+    ->name('usuario_externos.import');
+Route::post('/usuario_externos/import', [UsuarioExternoImportController::class, 'import'])
+    ->name('usuario_externos.import.do');
+    
     });
 
     /*
