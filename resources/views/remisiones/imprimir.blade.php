@@ -142,7 +142,7 @@
   $nitDigits = preg_replace('/\D+/', '', $nitRaw);
   try {
     $nf = new \NumberFormatter('es', \NumberFormatter::SPELLOUT);
-    $nitLiteral = $nitDigits !== '' ? $nf->format($nitDigits) : null;
+    $nitLiteral =  null;
   } catch (\Throwable $e) { $nitLiteral = null; }
 
   $fmt = fn($n) => '$'.number_format((float)$n, 0, ',', '.');

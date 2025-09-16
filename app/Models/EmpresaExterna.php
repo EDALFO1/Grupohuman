@@ -25,7 +25,7 @@ class EmpresaExterna extends Model
         return [
             'documento_id' => 'required|exists:documentos,id',
             'numero' => 'required|string|max:255',
-            'nombre' => ['required', 'regex:/^[\pL\s\.,\-\/]+$/u'],
+            'nombre' => ['required', 'regex:/^[\pL\pN\s\.,\-\/]+$/u'],
             'direccion' => 'required|string|max:255',
             'telefono' => 'required|numeric',
             'contacto' =>['required', 'regex:/^[\pL\pN\s\-]+$/u'],

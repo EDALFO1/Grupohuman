@@ -57,7 +57,7 @@
                         <hr>
 
                         {{-- Tabla SIN la clase "datatable" para no mezclar paginación JS vs servidor --}}
-                        <table class="table">
+                        <table class="table data-table">
                             <thead class="thead-dark">
                                 <tr>
                                     <th>Documento</th>
