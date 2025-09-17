@@ -66,52 +66,62 @@ class LiquidacionesExcelExport implements WithEvents, WithTitle
     }
 
     protected function hojaLiquidaciones(Worksheet $sheet, EmpresaLocal $empresa, Collection $usuarios): void
-    {
-        $periodo  = $this->periodo();
+{
+    $periodo  = $this->periodo();
 
-        // Encabezado
-        $sheet->setCellValue('K1', $empresa->nombre);
-        $sheet->setCellValue('K2', ($empresa->documento->nombre ?? 'NIT') . ' ' . $empresa->numero_documento);
-        $sheet->setCellValue('K3', 'SUCURSAL PRINCIPAL: PRINCIPAL');
-        $sheet->setCellValue('K4', 'TIPO EMPLEADOR: EMPRESA');
-        $sheet->setCellValue('K5', 'PERFIL: NOMINA/TESORERIA');
-        $sheet->setCellValue('K6', 'ÚLTIMO ACCESO: ' . now()->format('Y/m/d H:i:s'));
-        $sheet->setCellValue('B9', $periodo['texto']);
+    // Encabezado
+    $sheet->setCellValue('K1', $empresa->nombre);
+    $sheet->setCellValue('K2', ($empresa->documento->nombre ?? 'NIT') . ' ' . $empresa->numero_documento);
+    $sheet->setCellValue('K3', 'SUCURSAL PRINCIPAL: PRINCIPAL');
+    $sheet->setCellValue('K4', 'TIPO EMPLEADOR: EMPRESA');
+    $sheet->setCellValue('K5', 'PERFIL: NOMINA/TESORERIA');
+    $sheet->setCellValue('K6', 'ÚLTIMO ACCESO: ' . now()->format('Y/m/d H:i:s'));
+    $sheet->setCellValue('B9', $periodo['texto']); // Y/m
 
-        $fila = 19;
-        $contador = 1;
-        $inicio = $periodo['inicio'];
-        $fin    = $periodo['fin'];
+    // ✅ Fila 10: A–B = pensión (mes anterior), C = salud (mes actual) en formato Y-m
+    $dt = $periodo['inicio']; // inicio del mes que estás exportando (Carbon)
+    $periodoPension = $dt->copy()->subMonthNoOverflow()->format('Y-m');
+    $periodoSalud   = $dt->format('Y-m');
 
-        foreach ($usuarios as $u) {
-            $dias = $this->diasALiquidar($u, $inicio, $fin);
-            if ($dias <= 0) continue;
+    $sheet->setCellValue('A10', $periodoPension);
+    $sheet->setCellValue('B10', $periodoPension);
+    $sheet->setCellValue('C10', $periodoSalud);
 
-            $salarioMes = (float)$u->sueldo;
-            $ibc = round($salarioMes * ($dias / 30), 2);
-            $horas = $dias * 8;
+    $fila = 19;
+    $contador = 1;
+    $inicio = $periodo['inicio'];
+    $fin    = $periodo['fin'];
 
-            $sheet->setCellValue("A{$fila}", $contador);
-            $sheet->setCellValue("B{$fila}", $u->documento->nombre ?? 'CC');
-            $sheet->setCellValue("C{$fila}", $u->numero);
-            $sheet->setCellValue("D{$fila}", $u->primer_apellido);
-            $sheet->setCellValue("E{$fila}", $u->segundo_apellido);
-            $sheet->setCellValue("F{$fila}", $u->primer_nombre);
-            $sheet->setCellValue("G{$fila}", $u->segundo_nombre);
-            $sheet->setCellValue("H{$fila}", '');
-            $sheet->setCellValue("I{$fila}", '');
-            $sheet->setCellValue("J{$fila}", '1. DEPENDIENTE');
-            $sheet->setCellValue("K{$fila}", $u->subtipoCotizante?->codigo . ' ' . $u->subtipoCotizante?->nombre);
-            $sheet->setCellValue("L{$fila}", $horas);
-            $sheet->setCellValue("AU{$fila}", $salarioMes);
-            $sheet->setCellValue("AX{$fila}", $u->pension?->nombre);
-            $sheet->setCellValue("AY{$fila}", $dias);
-            $sheet->setCellValue("AZ{$fila}", $ibc);
+    foreach ($usuarios as $u) {
+        $dias = $this->diasALiquidar($u, $inicio, $fin);
+        if ($dias <= 0) continue;
 
-            $fila++;
-            $contador++;
-        }
+        $salarioMes = (float)$u->sueldo;
+        $ibc = round($salarioMes * ($dias / 30), 2);
+        $horas = $dias * 8;
+
+        $sheet->setCellValue("A{$fila}", $contador);
+        $sheet->setCellValue("B{$fila}", $u->documento->nombre ?? 'CC');
+        $sheet->setCellValue("C{$fila}", $u->numero);
+        $sheet->setCellValue("D{$fila}", $u->primer_apellido);
+        $sheet->setCellValue("E{$fila}", $u->segundo_apellido);
+        $sheet->setCellValue("F{$fila}", $u->primer_nombre);
+        $sheet->setCellValue("G{$fila}", $u->segundo_nombre);
+        $sheet->setCellValue("H{$fila}", '');
+        $sheet->setCellValue("I{$fila}", '');
+        $sheet->setCellValue("J{$fila}", '1. DEPENDIENTE');
+        $sheet->setCellValue("K{$fila}", $u->subtipoCotizante?->codigo . ' ' . $u->subtipoCotizante?->nombre);
+        $sheet->setCellValue("L{$fila}", $horas);
+        $sheet->setCellValue("AU{$fila}", $salarioMes);
+        $sheet->setCellValue("AX{$fila}", $u->pension?->nombre);
+        $sheet->setCellValue("AY{$fila}", $dias);
+        $sheet->setCellValue("AZ{$fila}", $ibc);
+
+        $fila++;
+        $contador++;
     }
+}
+
 
     public function registerEvents(): array
     {

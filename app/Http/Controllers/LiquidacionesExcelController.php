@@ -64,40 +64,67 @@ class LiquidacionesExcelController extends Controller
     }
 
     public function descargarLote(Request $request, ExportBatch $batch): Response
-    {
-        $empresa = EmpresaLocal::with('documento')
-            ->findOrFail((int) $batch->empresa_local_id);
+{
+    $empresa = EmpresaLocal::with('documento')
+        ->findOrFail((int) $batch->empresa_local_id);
 
-        $recibos = Recibo::with([
-                'usuarioExterno.documento',
-                'usuarioExterno.eps',
-                'usuarioExterno.arl',
-                'usuarioExterno.pension',
-                'usuarioExterno.caja',
-                'usuarioExterno.subtipoCotizante',
-            ])
-            ->where('empresa_local_id', $empresa->id)
-            ->where('export_batch_id', $batch->id)
-            ->orderBy('fecha')
-            ->get();
+    $recibos = Recibo::with([
+            'usuarioExterno.documento',
+            'usuarioExterno.eps',
+            'usuarioExterno.arl',
+            'usuarioExterno.pension',
+            'usuarioExterno.caja',
+            'usuarioExterno.subtipoCotizante',
+        ])
+        ->where('empresa_local_id', $empresa->id)
+        ->where('export_batch_id', $batch->id)
+        ->orderBy('fecha')
+        ->get();
 
-        if ($recibos->isEmpty()) {
-            return back()->with('warning', "No hay recibos en el lote #{$batch->id}.");
-        }
-
-        $spreadsheet = $this->loadTemplate();
-        $sheet       = $this->getLiquidacionesSheet($spreadsheet);
-
-        // Si el batch no trae período, usamos el del primer recibo
-        $dt = $batch->periodo
-            ? Carbon::createFromFormat('Y-m', $batch->periodo)->startOfMonth()
-            : optional($recibos->first()?->fecha)?->copy()->startOfMonth() ?? now()->startOfMonth();
-
-        $this->llenarEncabezado($sheet, $empresa, $dt);
-        $this->llenarFilasDesdeRecibos($sheet, $recibos);
-
-        return $this->streamXlsx($spreadsheet, "Liquidaciones_lote_{$batch->id}.xlsx");
+    if ($recibos->isEmpty()) {
+        return back()->with('warning', "No hay recibos en el lote #{$batch->id}.");
     }
+
+    $spreadsheet = $this->loadTemplate();
+    $sheet       = $this->getLiquidacionesSheet($spreadsheet);
+
+    // Si el batch no trae período, usamos el del primer recibo
+    $dt = $batch->periodo
+        ? Carbon::createFromFormat('Y-m', $batch->periodo)->startOfMonth()
+        : optional($recibos->first()?->fecha)?->copy()->startOfMonth() ?? now()->startOfMonth();
+
+    // Encabezado general (K1..K6, B9, E9, etc.)
+    $this->llenarEncabezado($sheet, $empresa, $dt);
+
+    // ✅ Fila 10 cuando el lote es homogéneo (un solo mes)
+    // Mapeamos los meses reales de los recibos como Y-m para decidir si es homogéneo
+    $months = $recibos->map(fn ($r) => Carbon::parse($r->fecha)->format('Y-m'))
+                      ->unique()
+                      ->values();
+
+    if ($months->count() === 1) {
+        // Forzamos fila 10 al mes único del lote (por si $dt venía de otra referencia)
+        $dtHomog = Carbon::createFromFormat('Y-m', $months->first())->startOfMonth();
+
+        $periodoPension = $dtHomog->copy()->subMonthNoOverflow()->format('Y-m'); // A–B
+        $periodoSalud   = $dtHomog->format('Y-m');                                // C
+
+        $sheet->setCellValue('A10', $periodoPension);
+        $sheet->setCellValue('B10', $periodoPension);
+        $sheet->setCellValue('C10', $periodoSalud);
+    } else {
+        // Lote con varios meses: limpiar fila 10 para no confundir
+        $sheet->setCellValue('A10', '');
+        $sheet->setCellValue('B10', '');
+        $sheet->setCellValue('C10', '');
+    }
+
+    // Filas de detalle
+    $this->llenarFilasDesdeRecibos($sheet, $recibos);
+
+    return $this->streamXlsx($spreadsheet, "Liquidaciones_lote_{$batch->id}.xlsx");
+}
+
 
     /* ==================== helpers ==================== */
 
@@ -135,26 +162,36 @@ class LiquidacionesExcelController extends Controller
      *  - E9 = tipo de planilla (E)
      *  - K1..K6 = bloque de empresa
      */
-    private function llenarEncabezado(Worksheet $sheet, EmpresaLocal $empresa, Carbon $dt): void
-    {
-        $docSigla = $empresa->documento->nombre ?? 'NIT';
+    // app/Http/Controllers/LiquidacionesExcelController.php
 
-        // Cabecera superior (columna K)
-        $sheet->setCellValue('K1', $empresa->nombre);
-        $sheet->setCellValue('K2', "{$docSigla} {$empresa->numero_documento}");
-        $sheet->setCellValue('K3', 'SUCURSAL PRINCIPAL: PRINCIPAL');
-        $sheet->setCellValue('K4', 'TIPO EMPLEADOR: EMPRESA');
-        $sheet->setCellValue('K5', 'PERFIL: NOMINA/TESORERIA');
-        $sheet->setCellValue('K6', 'ÚLTIMO ACCESO: ' . now()->format('Y/m/d H:i:s'));
+private function llenarEncabezado(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet, \App\Models\EmpresaLocal $empresa, \Carbon\Carbon $dt): void
+{
+    $docSigla = $empresa->documento->nombre ?? 'NIT';
 
-        // Períodos (fila 9)
-        $periodoPension = $dt->copy()->subMonthNoOverflow()->format('Y-m');
-        $periodoSalud   = $dt->format('Y-m');
+    // Bloque empresa
+    $sheet->setCellValue('K1', $empresa->nombre);
+    $sheet->setCellValue('K2', "{$docSigla} {$empresa->numero_documento}");
+    $sheet->setCellValue('K3', 'SUCURSAL PRINCIPAL: PRINCIPAL');
+    $sheet->setCellValue('K4', 'TIPO EMPLEADOR: EMPRESA');
+    $sheet->setCellValue('K5', 'PERFIL: NOMINA/TESORERIA');
+    $sheet->setCellValue('K6', 'ÚLTIMO ACCESO: ' . now()->format('Y/m/d H:i:s'));
 
-        $sheet->setCellValue('B9', $periodoPension); // Pensión
-        $sheet->setCellValue('C9', $periodoSalud);   // Salud
-        $sheet->setCellValue('E9', 'E');             // Tipo planilla
-    }
+    // Períodos
+    $periodoPension = $dt->copy()->subMonthNoOverflow()->format('Y-m'); // mes anterior
+    $periodoSalud   = $dt->format('Y-m');                                // mes actual
+
+    // Fila 9 (ya existía)
+    $sheet->setCellValue('B9', $dt->format('Y/m')); // si esa celda muestra Y/m en tu plantilla
+    $sheet->setCellValue('C9', $periodoSalud);      // opcional: sólo si usas C9 para salud
+    $sheet->setCellValue('E9', 'E');
+
+    // ✅ Fila 10 (nuevo requerimiento): A–B = pensión, C = salud
+    // Nota: si A10:B10 están combinadas en la plantilla, con A10 basta; aún así escribimos B10 por tolerancia.
+    $sheet->setCellValue('A10', $periodoPension);
+    $sheet->setCellValue('B10', $periodoPension);
+    $sheet->setCellValue('C10', $periodoSalud);
+}
+
 
     private function llenarFilasDesdeRecibos(Worksheet $sheet, $recibos): void
     {
