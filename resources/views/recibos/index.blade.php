@@ -48,7 +48,7 @@
       class="d-flex flex-wrap align-items-center gap-2">
   @csrf
   <input type="hidden" name="empresa_local_id" value="{{ $empresaIdActual }}">
-  <input type="month" name="periodo" class="form-control form-control-sm w-auto"
+  <input type="hidden" name="periodo" class="form-control form-control-sm w-auto"
          value="{{ $periodoActual }}" required>
   <button type="submit" class="btn btn-success btn-sm" {{ ($pendientesCount ?? 0) == 0 ? 'disabled' : '' }}>
     Exportar por Caja (ZIP)

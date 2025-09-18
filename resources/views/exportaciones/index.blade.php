@@ -46,12 +46,9 @@
                       <td>${{ number_format($batch->total, 0, ',', '.') }}</td>
                       <td>{{ optional($batch->created_at)->format('Y-m-d H:i') }}</td>
                       <td class="text-end">
-                        <a class="btn btn-sm btn-outline-primary"
-                           href="{{ route('exportaciones.descargar', $batch) }}">
-                          Descargar Excel
-                        </a>
+                       
                         <a class="btn btn-sm btn-success ms-1"
-                           href="{{ route('exportaciones.descargarPorCaja', $batch) }}">
+                           href="{{ route('exportaciones.descargarPorCajaLote', $batch) }}">
                           Descargar ZIP por caja
                         </a>
                       </td>
