@@ -181,6 +181,11 @@
             <i class="bi bi-send" style="font-size: 1em;"></i><span>Subtipos</span>
           </a>
         </li>
+        <li>
+          <a href="{{ route ('incapacidades.index')}}">
+            <i class="bi bi-send" style="font-size: 1em;"></i><span>Incapacidades</span>
+          </a>
+        </li>
       </ul>  
     </li>
 

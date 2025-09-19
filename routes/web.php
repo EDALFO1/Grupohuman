@@ -25,6 +25,7 @@ use App\Http\Controllers\{
     ValorController
 };
 use App\Http\Controllers\LiquidacionesExcelController;
+use App\Http\Controllers\IncapacidadController; 
 
 /*
 |--------------------------------------------------------------------------
@@ -350,5 +351,19 @@ Route::prefix('subtipos')->group(function () {
     Route::delete('/{subtipo_cotizante}', [SubtipoCotizanteController::class, 'destroy'])->name('subtipo_cotizantes.destroy');
 });
 
+// Incapacidades
+Route::prefix('incapacidades')->name('incapacidades.')->group(function () {
+    Route::get('/', [IncapacidadController::class, 'index'])->name('index');
+    Route::get('/crear', [IncapacidadController::class, 'create'])->name('create');
+    Route::post('/guardar', [IncapacidadController::class, 'store'])->name('store');
+    Route::get('/{incapacidad}/editar', [IncapacidadController::class, 'edit'])->name('edit');
+    Route::put('/{incapacidad}', [IncapacidadController::class, 'update'])->name('update');
+    Route::delete('/{incapacidad}', [IncapacidadController::class, 'destroy'])->name('destroy');
+
+    // Acciones adicionales
+    Route::post('/{incapacidad}/cerrar', [IncapacidadController::class, 'cerrar'])->name('cerrar');
+    Route::post('/buscar-usuario', [IncapacidadController::class, 'buscarUsuario'])->name('buscarUsuario');
+    Route::post('/{incapacidad}/observaciones', [IncapacidadController::class, 'agregarObservacion'])->name('observaciones.agregar');
+});
 
 });
