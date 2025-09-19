@@ -11,6 +11,18 @@
   <nav class="header-nav ms-auto">
     <ul class="d-flex align-items-center">
 
+
+<li class="nav-item me-4">
+  <a href="{{ route('planes.index') }}" 
+     class="btn d-flex align-items-center text-white px-3" 
+     style="background: linear-gradient(90deg, #0062E6, #33AEFF);">
+    <i class="bi bi-layers-fill me-2 fs-5"></i>
+    <span>Planes</span>
+  </a>
+</li>
+
+
+
       {{-- Mostrar empresa actual en verde --}}
       @php
           use App\Models\EmpresaLocal;

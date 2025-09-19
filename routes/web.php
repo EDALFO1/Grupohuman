@@ -26,6 +26,7 @@ use App\Http\Controllers\{
 };
 use App\Http\Controllers\LiquidacionesExcelController;
 use App\Http\Controllers\IncapacidadController; 
+use App\Http\Controllers\PlanesController;
 
 /*
 |--------------------------------------------------------------------------
@@ -365,5 +366,7 @@ Route::prefix('incapacidades')->name('incapacidades.')->group(function () {
     Route::post('/buscar-usuario', [IncapacidadController::class, 'buscarUsuario'])->name('buscarUsuario');
     Route::post('/{incapacidad}/observaciones', [IncapacidadController::class, 'agregarObservacion'])->name('observaciones.agregar');
 });
+
+Route::get('/planes', [PlanesController::class, 'index'])->name('planes.index');
 
 });
