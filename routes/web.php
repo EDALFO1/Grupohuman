@@ -80,7 +80,8 @@ Route::middleware(['auth', SeleccionarEmpresaMiddleware::class])->group(function
         Route::post('/retiros-masivos', [ReciboController::class, 'retirosMasivosExport'])
             ->name('recibos.retirosMasivos.export');
     });
-
+     
+     
     // ============================================================
     // ========== EXPORTACIONES (RUTAS CORRECTAS) =================
     // ============================================================
@@ -320,6 +321,7 @@ Route::post('/usuario_externos/import', [UsuarioExternoImportController::class, 
         // (Si aún los usas)
         Route::post('/exportar-pendientes', [ReciboController::class, 'exportarPendientes'])->name('recibos.exportarPendientes');
         Route::get('/exportar-lote/{batch}', [ReciboController::class, 'descargarLote'])->name('recibos.descargarLote');
+        Route::get('/recibos/pendientes', [ReciboController::class, 'pendientes'])->name('recibos.pendientes');
     });
 
     /*

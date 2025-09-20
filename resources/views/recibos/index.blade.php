@@ -30,45 +30,35 @@
               <a href="{{ route('recibos.create') }}" class="btn btn-primary">
                 <i class="fa-solid fa-circle-plus"></i> Crear Nuevo Recibo
               </a>
+
               {{-- Exportar usuarios vigentes --}}
               <form action="{{ route('excel.usuarios_vigentes.descargar') }}" method="GET" class="d-inline">
                 <input type="hidden" name="empresa_local_id" value="{{ $empresaIdActual }}">
-                <input type="month"  name="periodo"          value="{{ $periodoActual }}" required>
+                <input type="month"  name="periodo" value="{{ $periodoActual }}" required>
                 <button type="submit" class="btn btn-success">
                   <i class="bi bi-file-earmark-excel"></i> Exportar usuarios vigentes
                 </button>
               </form>
 
-              {{-- Preparar exportación por caja (crea el batch, marca y resetea contador) --}}
-             @php $pend = (int)($pendientesCount ?? 0); @endphp
-
-<form method="POST"
-      action="{{ route('exportaciones.descargarPorCaja') }}"
-      onsubmit="return confirm('¿Exportar por caja SOLO los recibos del mes seleccionado y marcarlos como exportados?');"
-      class="d-flex flex-wrap align-items-center gap-2">
-  @csrf
-  <input type="hidden" name="empresa_local_id" value="{{ $empresaIdActual }}">
-  <input type="hidden" name="periodo" class="form-control form-control-sm w-auto"
-         value="{{ $periodoActual }}" required>
-  <button type="submit" class="btn btn-success btn-sm" {{ ($pendientesCount ?? 0) == 0 ? 'disabled' : '' }}>
-    Exportar por Caja (ZIP)
-    @if(($pendientesCount ?? 0) > 0)
-      <span class="badge bg-light text-dark">{{ $pendientesCount }}</span>
-    @endif
-  </button>
-  <a href="{{ route('exportaciones.index') }}" class="btn btn-outline-secondary btn-sm">Ver exportaciones</a>
-</form>
-
-
-
-
-              
-
-              
+              {{-- Exportar por Caja (ZIP) --}}
+              <form method="POST"
+                    action="{{ route('exportaciones.descargarPorCaja') }}"
+                    onsubmit="return confirm('¿Exportar por caja SOLO los recibos del mes seleccionado y marcarlos como exportados?');"
+                    class="d-flex flex-wrap align-items-center gap-2">
+                @csrf
+                <input type="hidden" name="empresa_local_id" value="{{ $empresaIdActual }}">
+                <input type="hidden" name="periodo" value="{{ $periodoActual }}" required>
+                <button type="submit" class="btn btn-success btn-sm" {{ ($pendientesCount ?? 0) == 0 ? 'disabled' : '' }}>
+                  Exportar por Caja (ZIP)
+                  @if(($pendientesCount ?? 0) > 0)
+                    <span class="badge bg-light text-dark">{{ $pendientesCount }}</span>
+                  @endif
+                </button>
+                <a href="{{ route('exportaciones.index') }}" class="btn btn-outline-secondary btn-sm">Ver exportaciones</a>
+              </form>
             </div>
 
-            <hr>
-
+            {{-- === TABLA DE RECIBOS EXISTENTES === --}}
             <table class="table datatable">
               <thead>
                 <tr>
@@ -110,7 +100,6 @@
               </tbody>
             </table>
 
-            {{-- Paginación --}}
             <div class="d-flex justify-content-center mt-3">
               {{ $recibos->links() }}
             </div>
