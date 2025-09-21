@@ -1,0 +1,29 @@
+@extends('layouts.main')
+@section('contenido')
+<main id="main" class="main">
+  <div class="pagetitle"><h1>Nuevo usuario solo ARL</h1></div>
+
+  <section class="section">
+    <div class="card">
+      <div class="card-body pt-3">
+        <form action="{{ route('arl-usuarios.store') }}" method="POST">
+          @csrf
+
+          @if ($errors->any())
+            <div class="alert alert-danger">
+              <ul class="mb-0">@foreach ($errors->all() as $err)<li>{{ $err }}</li>@endforeach</ul>
+            </div>
+          @endif
+
+          @include('arl_usuarios.form', ['arlUsuario' => $arlUsuario])
+
+          <div class="text-end mt-3">
+            <a href="{{ route('arl-usuarios.index') }}" class="btn btn-secondary">Cancelar</a>
+            <button class="btn btn-primary" type="submit">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+@endsection

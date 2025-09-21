@@ -25,8 +25,18 @@ class PlanesController extends Controller
             $arl[$nivel] = $ceil100($smmlv * $porc);
         }
 
+        // SOLO ARL usa admin fijo de 56.000
+        $soloArlAdmin = 56000;
+
         // Tablas de planes
         $planes = [
+            // NUEVO: Solo ARL (ARL + 56.000)
+            'SOLO ARL' => collect($arl)->map(fn($v, $nivel) => [
+                'label' => "Solo ARL {$nivel}",
+                'valor' => $v + $soloArlAdmin,
+                'breakdown' => ["arl{$nivel}" => $v, 'admin' => $soloArlAdmin],
+            ])->values(),
+
             'EPS + ARL' => collect($arl)->map(fn($v, $nivel) => [
                 'label' => "EPS + ARL{$nivel}",
                 'valor' => $eps + $v + $admin,

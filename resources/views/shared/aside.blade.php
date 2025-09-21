@@ -160,6 +160,11 @@
             <i class="bi bi-send" style="font-size: 1em;"></i><span>Incapacidades</span>
           </a>
         </li>
+        <li>
+          <a href="{{ route ('arl-usuarios.index')}}">
+            <i class="bi bi-send" style="font-size: 1em;"></i><span>Solo Arl</span>
+          </a>
+        </li>
       </ul>  
     </li>
 

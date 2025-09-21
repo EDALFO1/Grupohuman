@@ -22,11 +22,16 @@ use App\Http\Controllers\{
     RemisionController,
     UsuarioExternoImportController,
     usuarios,
-    ValorController
+    ValorController,
+    ArlUsuarioController,
+    PlanesController,
+    IncapacidadController,
+    LiquidacionesExcelController
 };
-use App\Http\Controllers\LiquidacionesExcelController;
-use App\Http\Controllers\IncapacidadController; 
-use App\Http\Controllers\PlanesController;
+
+
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -370,5 +375,19 @@ Route::prefix('incapacidades')->name('incapacidades.')->group(function () {
 });
 
 Route::get('/planes', [PlanesController::class, 'index'])->name('planes.index');
+
+
+
+Route::prefix('arl-usuarios')
+    ->as('arl-usuarios.')
+    ->group(function () {
+        Route::get('/',               [ArlUsuarioController::class, 'index'])->name('index');
+        Route::get('/create',         [ArlUsuarioController::class, 'create'])->name('create');
+        Route::post('/',              [ArlUsuarioController::class, 'store'])->name('store');
+        Route::get('/{arlUsuario}/edit', [ArlUsuarioController::class, 'edit'])->name('edit');
+        Route::put('/{arlUsuario}',   [ArlUsuarioController::class, 'update'])->name('update');
+        Route::delete('/{arlUsuario}',[ArlUsuarioController::class, 'destroy'])->name('destroy');
+    });
+
 
 });
