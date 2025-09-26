@@ -29,7 +29,7 @@
         @endif
 
         <div class="table-responsive mt-3">
-          <table class="table">
+          <table id="tabla-arl-usuarios" class="table">
             <thead>
               <tr>
                 <th>Tipo Doc</th>

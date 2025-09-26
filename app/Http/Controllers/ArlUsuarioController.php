@@ -64,7 +64,7 @@ class ArlUsuarioController extends Controller
 
         ArlUsuario::create($data);
 
-        return redirect()->route('arl_usuarios.index')->with('success','Usuario ARL creado correctamente.');
+        return redirect()->route('arl-usuarios.index')->with('success','Usuario ARL creado correctamente.');
     }
 
     public function edit(ArlUsuario $arlUsuario)

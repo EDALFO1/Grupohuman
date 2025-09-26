@@ -59,7 +59,7 @@
             </div>
 
             {{-- === TABLA DE RECIBOS EXISTENTES === --}}
-            <table class="table datatable">
+            <table class="table ">
               <thead>
                 <tr>
                   <th>#</th>
