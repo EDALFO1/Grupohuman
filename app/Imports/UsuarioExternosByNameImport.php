@@ -48,6 +48,41 @@ class UsuarioExternosByNameImport implements
         'cargo','estado','novedad','fecha_retiro'
     ];
 
+    /** Aliases aceptados para encabezados (normalizados) */
+    protected array $headerAliases = [
+        // claves normalizadas (las de expectedHeaders) => aliases que quieras aceptar
+        'documento' => ['tipo documento','tipo_de_documento','tipo documento','tipo documento'],
+        'asesor' => ['asesor_nombre','asesor','asesor nombre','numero asesor','numero_asesor'],
+        'numero' => ['numero documento','num documento','número documento','nro documento'],
+        'fecha_expedicion' => ['fecha expedicion','fecha_expedicion','fecha-expedicion','fecha_expedición'],
+        'primer_apellido' => ['apellido1','apellido 1','primer apellido','primer_apellido'],
+        'segundo_apellido' => ['apellido2','apellido 2','segundo apellido','segundo_apellido'],
+        'primer_nombre' => ['nombre1','nombre 1','primer nombre','primer_nombre'],
+        'segundo_nombre' => ['nombre2','nombre 2','segundo nombre','segundo_nombre'],
+        'fecha_nacimiento' => ['fecha nacimiento','fecha_nac','fecha_nac.','fecha_de_nacimiento'],
+        'correo_electronico' => ['email','correo','correo electronico','correo_electronico'],
+        'direccion' => ['dirección','direccion completa','direccion'],
+        'telefono' => ['teléfono','tel','telefono celular','telefono'],
+        'fecha_afiliacion' => ['fecha ingreso','fecha_afiliacion','fecha de afiliacion','fecha_ingreso'],
+        'sexo' => ['genero','sexo'],
+        'eps' => ['eps nombre','eps_id','eps nombre'],
+        'arl' => ['arl nivel','arl_id','arl nivel'],
+        'pension' => ['pension','afp','pensión'],
+        'caja' => ['caja compensacion','caja_id','caja_compensacion'],
+        'subtipo_cotizante' => ['subtipo','subtipo cotizante','subtipo_cotizante'],
+        'empresa_local' => ['empresa','empresa local','empresa_local_id','empresa_local'],
+        'empresa_externa' => ['empresa externa','empresa_externa_id','empresa_externa'],
+        'sueldo' => ['salario','sueldo_mensual','salario_mensual'],
+        'admon' => ['administracion','valor administración','valor_administracion','admon'],
+        'seg_exequial' => ['servicio exequial','seg_exequial','servicio_exequial'],
+        'mora' => ['mora'],
+        'otros_servicios' => ['otros servicios','otros_serv.','otros_servicios'],
+        'cargo' => ['cargo'],
+        'estado' => ['activo','estado usuario','estado'],
+        'novedad' => ['novedad'],
+        'fecha_retiro' => ['fecha retiro','fecha_de_retiro','fecha_retiro'],
+    ];
+
     /** Control del chequeo de encabezados */
     protected bool $headersChecked = false;
     protected bool $abortImport = false;
@@ -245,7 +280,7 @@ class UsuarioExternosByNameImport implements
 
     /** ================== Helpers ================== */
 
-    /** Valida encabezados; si difieren, crea un Failure y aborta todo el archivo */
+    /** Valida encabezados; si difieren, crea un Failure y aborta (solo si faltan columnas) */
     protected function validateHeadersOrAbort(array $rowAssoc, int $rowIndex): void
     {
         if ($this->headersChecked) return;
@@ -257,20 +292,53 @@ class UsuarioExternosByNameImport implements
             return preg_replace('/\s+/u',' ', $s);
         };
 
-        $present  = array_map($norm, array_keys($rowAssoc));
-        $expected = array_map($norm, $this->expectedHeaders);
+        // 1) Filtrar claves vacías / numéricas
+        $rawPresentKeys = array_keys($rowAssoc);
+        $presentKeys = array_filter($rawPresentKeys, function($k){
+            return is_string($k) && trim((string)$k) !== '';
+        });
 
-        $missing = array_values(array_diff($expected, $present));
-        $extra   = array_values(array_diff($present, $expected));
+        $presentNorm = array_map($norm, $presentKeys);
 
-        if (!empty($missing) || !empty($extra)) {
-            $msgs = [];
-            if (!empty($missing)) $msgs[] = 'Faltan columnas: '.implode(', ', $missing);
-            if (!empty($extra))   $msgs[] = 'Columnas desconocidas o con nombre distinto: '.implode(', ', $extra);
+        // 2) Construir mapa de todas las formas aceptadas (expected + aliases)
+        $allAllowed = [];
+        foreach ($this->expectedHeaders as $eh) {
+            $allAllowed[] = $norm($eh);
+            $aliases = $this->headerAliases[$eh] ?? [];
+            foreach ($aliases as $a) $allAllowed[] = $norm($a);
+        }
+        $allAllowed = array_unique($allAllowed);
 
+        // 3) Identificar extras (presentes que no están permitidos)
+        $extra = array_values(array_diff($presentNorm, $allAllowed));
+
+        // 4) Identificar faltantes (expected que no se encontraron ni por alias)
+        $matched = [];
+        foreach ($presentNorm as $pk) {
+            foreach ($this->expectedHeaders as $eh) {
+                $ehNorm = $norm($eh);
+                $aliasesNorm = array_map($norm, $this->headerAliases[$eh] ?? []);
+                if ($pk === $ehNorm || in_array($pk, $aliasesNorm, true)) {
+                    $matched[] = $ehNorm;
+                }
+            }
+        }
+        $missing = array_values(array_diff(array_map($norm, $this->expectedHeaders), array_unique($matched)));
+
+        // 5) Mensajes
+        $msgs = [];
+        if (!empty($missing)) $msgs[] = 'Faltan columnas: '.implode(', ', $missing);
+        if (!empty($extra))   $msgs[] = 'Columnas desconocidas o con nombre distinto: '.implode(', ', $extra);
+
+        if (!empty($msgs)) {
+            // guardamos el failure para mostrar al usuario
             $failure = new Failure($rowIndex, '_headers', $msgs, $rowAssoc);
             $this->onFailure($failure);
-            $this->abortImport = true;
+
+            // Si hay faltantes, aborta. Si sólo hay extras, lo notificamos pero no abortamos.
+            if (!empty($missing)) {
+                $this->abortImport = true;
+            }
         }
     }
 

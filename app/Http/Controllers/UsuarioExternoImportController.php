@@ -9,6 +9,7 @@ use App\Exports\UsuarioExternosTemplateExport;
 
 
 
+
 class UsuarioExternoImportController extends Controller
 {
     public function index() { return $this->showForm(); }
@@ -52,9 +53,9 @@ class UsuarioExternoImportController extends Controller
         ->with('success', "¡Importación OK! Procesadas: {$import->processed}. Creadas: {$import->created}. Saltadas: {$import->skipped}.");
     }
 
+    
     public function downloadTemplate()
-    {
-    // Si quieres proteger por auth, usa ->middleware('auth') en la ruta
+{
     return Excel::download(new UsuarioExternosTemplateExport, 'usuario_externos_template.xlsx');
-    }
+}
 }
