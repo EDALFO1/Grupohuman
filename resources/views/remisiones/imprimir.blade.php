@@ -7,7 +7,19 @@
     :root{
       --b:#000;
       --fs:13px;
+
+      /* Variables globales para márgenes */
+      --margin-left-screen: 0.5in;
+      --margin-right-screen: 0.5in;
+      --margin-top-screen: 0.5in;
+      --margin-bottom-screen: 0.5in;
+
+      --margin-left-print: 0.5in;
+      --margin-right-print: 0.3in; /* Ajusta este valor para mover más a la izquierda */
+      --margin-top-print: 0.5in;
+      --margin-bottom-print: 0.5in;
     }
+
     *{ box-sizing: border-box; }
     html, body{ height:100%; }
     body{
@@ -18,12 +30,69 @@
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    /* Media carta vertical */
-    @page{ size: 5.5in 8.5in; margin: 0.5in; }
+
+    /* Media carta vertical (en pantalla) */
+    @page {
+      size: 5.5in 8.5in;
+      margin-top: var(--margin-top-screen);
+      margin-bottom: var(--margin-bottom-screen);
+      margin-left: var(--margin-left-screen);
+      margin-right: var(--margin-right-screen);
+    }
+
+    /* Ajustes solo al imprimir */
+    @media print {
+      @page {
+        size: 5.5in 8.5in;
+        margin-top: var(--margin-top-print);
+        margin-bottom: var(--margin-bottom-print);
+        margin-left: var(--margin-left-print);
+        margin-right: var(--margin-right-print);
+      }
+
+      /* Respaldo para navegadores que ignoran @page */
+      body {
+        padding-top: var(--margin-top-print);
+        padding-bottom: var(--margin-bottom-print);
+        padding-left: var(--margin-left-print);
+        padding-right: var(--margin-right-print);
+      }
+
+      .d-print-none{ display:none !important; }
+      body{ margin:0; }
+    }
+
     .sheet{ padding: 0; }
 
-    .actions{ text-align:right; margin: 10px 0; }
-    .actions .btn{ padding:8px 12px; border:1px solid #ccc; background:#f6f6f6; cursor:pointer; }
+    /* Botón moderno */
+    .actions{
+      text-align: right;
+      margin: 15px 0;
+    }
+    .btn{
+      background: linear-gradient(135deg, #0C28A8, #2237A3); /* degradado elegante */
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      padding: 10px 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover{
+      background: linear-gradient(135deg, #0C28A8, #2237A3);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+    }
+    .btn:active{
+      transform: translateY(0);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+    }
 
     .header{
       text-align:center;
@@ -86,9 +155,7 @@
       padding: 8px 10px;
     }
     .total-text{ font-weight:700; }
-    .total-num{
-      font-weight:800;
-    }
+    .total-num{ font-weight:800; }
 
     /* Nota editable */
     .nota{
@@ -101,97 +168,90 @@
       content: "Escribe aquí instrucciones/notas para el cliente…";
       color:#888;
     }
-
-    @media print{
-      .d-print-none{ display:none !important; }
-      body{ margin:0; }
-    }
   </style>
 </head>
 <body>
 
   <div class="sheet">
     <div class="actions d-print-none">
-      <button class="btn" onclick="window.print()">Imprimir</button>
+      <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
     </div>
 
     @php
-  use Carbon\Carbon;
+      use Carbon\Carbon;
 
-  $u = $remision->usuarioExterno;
-  $empresa = $u?->empresaLocal;
+      $u = $remision->usuarioExterno;
+      $empresa = $u?->empresaLocal;
 
-  $empresaNombre = data_get($empresa, 'nombre', '');
+      $empresaNombre = data_get($empresa, 'nombre', '');
 
-  // 1) Intentar varias llaves para el NIT
-  $posiblesNIT = ['nit','NIT','numero_documento','num_documento','documento','identificacion','rut','tax_id'];
-  $nitRaw = '';
-  foreach ($posiblesNIT as $k) {
-      $val = data_get($empresa, $k);
-      if (filled($val)) { $nitRaw = (string)$val; break; }
-  }
+      // 1) Intentar varias llaves para el NIT
+      $posiblesNIT = ['nit','NIT','numero_documento','num_documento','documento','identificacion','rut','tax_id'];
+      $nitRaw = '';
+      foreach ($posiblesNIT as $k) {
+          $val = data_get($empresa, $k);
+          if (filled($val)) { $nitRaw = (string)$val; break; }
+      }
 
-  // 2) Agregar DV si existe separado
-  $dv = data_get($empresa, 'dv') ?? data_get($empresa, 'digito_verificacion');
-  $nitShown = $nitRaw;
-  if ($dv && strpos($nitRaw, '-') === false) {
-      $nitShown = trim($nitRaw).'-'.trim($dv);
-  }
+      // 2) Agregar DV si existe separado
+      $dv = data_get($empresa, 'dv') ?? data_get($empresa, 'digito_verificacion');
+      $nitShown = $nitRaw;
+      if ($dv && strpos($nitRaw, '-') === false) {
+          $nitShown = trim($nitRaw).'-'.trim($dv);
+      }
 
-  // 3) NIT en letras (solo dígitos)
-  $nitDigits = preg_replace('/\D+/', '', $nitRaw);
-  try {
-    $nf = new \NumberFormatter('es', \NumberFormatter::SPELLOUT);
-    $nitLiteral =  null;
-  } catch (\Throwable $e) { $nitLiteral = null; }
+      // 3) NIT en letras (solo dígitos)
+      $nitDigits = preg_replace('/\D+/', '', $nitRaw);
+      try {
+        $nf = new \NumberFormatter('es', \NumberFormatter::SPELLOUT);
+        $nitLiteral =  null;
+      } catch (\Throwable $e) { $nitLiteral = null; }
 
-  $fmt = fn($n) => '$'.number_format((float)$n, 0, ',', '.');
+      $fmt = fn($n) => '$'.number_format((float)$n, 0, ',', '.');
 
-  $fecha = $remision->fecha instanceof Carbon ? $remision->fecha : Carbon::parse($remision->fecha);
-  $periodo = $fecha->copy()->subMonthNoOverflow()->format('m/Y');
+      $fecha = $remision->fecha instanceof Carbon ? $remision->fecha : Carbon::parse($remision->fecha);
+      $periodo = $fecha->copy()->subMonthNoOverflow()->format('m/Y');
 
-  $docTipo = $u?->documento?->nombre ?? 'Documento';
-  $docNum  = $u?->numero ?? '';
+      $docTipo = $u?->documento?->nombre ?? 'Documento';
+      $docNum  = $u?->numero ?? '';
 
-  $nombreCompleto = trim(($u?->primer_nombre.' '.($u?->segundo_nombre ?? '').' '.$u?->primer_apellido.' '.($u?->segundo_apellido ?? '')));
+      $nombreCompleto = trim(($u?->primer_nombre.' '.($u?->segundo_nombre ?? '').' '.$u?->primer_apellido.' '.($u?->segundo_apellido ?? '')));
 
-  $vEPS      = $remision->valor_eps ?? 0;
-  $vARL      = $remision->valor_arl ?? 0;
-  $vAFP      = $remision->valor_pension ?? 0;
-  $vCaja     = $remision->valor_caja ?? 0;
-  $vIVA      = 0;
+      $vEPS      = $remision->valor_eps ?? 0;
+      $vARL      = $remision->valor_arl ?? 0;
+      $vAFP      = $remision->valor_pension ?? 0;
+      $vCaja     = $remision->valor_caja ?? 0;
+      $vIVA      = 0;
 
-  $vMora       = $remision->valor_mora ?? 0;
-  $vSegVida    = 0;
-  $vExequial   = $remision->valor_exequial ?? 0;
-  $vAdmon      = $remision->valor_admon ?? 0;
-  $vMensajeria = 0;
+      $vMora       = $remision->valor_mora ?? 0;
+      $vSegVida    = 0;
+      $vExequial   = $remision->valor_exequial ?? 0;
+      $vAdmon      = $remision->valor_admon ?? 0;
+      $vMensajeria = 0;
 
-  $total = $remision->total ?? ($vEPS + $vARL + $vAFP + $vCaja + $vIVA + $vMora + $vSegVida + $vExequial + $vAdmon + $vMensajeria + (int)($remision->otros_servicios ?? 0));
+      $total = $remision->total ?? ($vEPS + $vARL + $vAFP + $vCaja + $vIVA + $vMora + $vSegVida + $vExequial + $vAdmon + $vMensajeria + (int)($remision->otros_servicios ?? 0));
 
-  $epsNombre   = $u?->eps?->nombre ?? '';
-  $arlNombre   = $u?->arl?->nombre ?? '';
-  $arlNivel    = $u?->arl?->nivel ?? '';
-  $afpNombre   = $u?->pension?->nombre ?? '';
-  $cajaNombre  = $u?->caja?->nombre ?? '';
-@endphp
-
+      $epsNombre   = $u?->eps?->nombre ?? '';
+      $arlNombre   = $u?->arl?->nombre ?? '';
+      $arlNivel    = $u?->arl?->nivel ?? '';
+      $afpNombre   = $u?->pension?->nombre ?? '';
+      $cajaNombre  = $u?->caja?->nombre ?? '';
+    @endphp
 
     <!-- Encabezado -->
     <div class="header">
-  @if($empresaNombre)
-    <div class="empresa">{{ $empresaNombre }}</div>
-  @endif
-  @if($nitShown)
-    <div class="nit">
-      NIT: {{ $nitShown }}
-      @if($nitLiteral)
-        <small>({{ $nitLiteral }})</small>
+      @if($empresaNombre)
+        <div class="empresa">{{ $empresaNombre }}</div>
+      @endif
+      @if($nitShown)
+        <div class="nit">
+          NIT: {{ $nitShown }}
+          @if($nitLiteral)
+            <small>({{ $nitLiteral }})</small>
+          @endif
+        </div>
       @endif
     </div>
-  @endif
-</div>
-
 
     <!-- Meta -->
     <div class="meta">
@@ -219,9 +279,10 @@
       </div>
       <div class="right-col" style="text-align:right;">
         <span class="label">Teléfono:</span> {{ $u?->telefono ?? '' }}
-      </div>    </div>
+      </div>
+    </div>
 
-    <!-- Cuadro 4x6 (fila 6: col2–4 combinadas) -->
+    <!-- Cuadro -->
     <table class="cuadro">
       <colgroup>
         <col style="width:35%">
@@ -230,42 +291,36 @@
         <col style="width:32%">
       </colgroup>
       <tbody>
-        <!-- Fila 1 -->
         <tr>
           <td><span class="bold">EPS</span> {{ $epsNombre }}</td>
           <td class="right">{{ $fmt($vEPS) }}</td>
           <td class="bold">MORA</td>
           <td class="right">{{ $fmt($vMora) }}</td>
         </tr>
-        <!-- Fila 2 -->
         <tr>
           <td><span class="bold">NIVEL ARL:</span> {{ $arlNivel ?: $arlNombre }}</td>
           <td class="right">{{ $fmt($vARL) }}</td>
           <td class="bold">Seg. vida</td>
           <td class="right">{{ $fmt($vSegVida) }}</td>
         </tr>
-        <!-- Fila 3 -->
         <tr>
           <td><span class="bold">AFP</span> {{ $afpNombre }}</td>
           <td class="right">{{ $fmt($vAFP) }}</td>
           <td class="bold">Exequial</td>
           <td class="right">{{ $fmt($vExequial) }}</td>
         </tr>
-        <!-- Fila 4 -->
         <tr>
           <td><span class="bold">CAJA</span> {{ $cajaNombre }}</td>
           <td class="right">{{ $fmt($vCaja) }}</td>
           <td class="bold">Admon</td>
           <td class="right">{{ $fmt($vAdmon) }}</td>
         </tr>
-        <!-- Fila 5 -->
         <tr>
           <td><span class="bold">IVA</span></td>
           <td class="right">{{ $fmt($vIVA) }}</td>
           <td class="bold">Mensajería</td>
           <td class="right">{{ $fmt($vMensajeria) }}</td>
         </tr>
-        <!-- Fila 6 (TOTAL) -->
         <tr class="fila-total">
           <td class="total-text">TOTAL</td>
           <td class="right total-num" colspan="3">{{ $fmt($total) }}</td>
@@ -273,12 +328,11 @@
       </tbody>
     </table>
 
-    <!-- Nota editable para instrucciones -->
+    <!-- Nota editable -->
     <div class="nota" contenteditable="true">
-  CRA 9 # 9 - 49 Tel:8818282, No.cuenta:017070235944 del banco DAVIVIENDA CTA AHORROS, enviar consignación por WHATSAPP al 3152041979, 3183375879, sin soporte no se efectúa pago.
-  <strong>Por favor cancelar los primeros días hábiles de cada mes para evitar inconsitencias en el servicio y negación de incapacidades</strong>
-</div>
-
+      CRA 9 # 9 - 49 Tel:8818282, No.cuenta:017070235944 del banco DAVIVIENDA CTA AHORROS, enviar consignación por WHATSAPP al 3152041979, 3183375879, sin soporte no se efectúa pago.
+      <strong>Por favor cancelar los primeros días hábiles de cada mes para evitar inconsitencias en el servicio y negación de incapacidades</strong>
+    </div>
 
   </div>
 </body>
