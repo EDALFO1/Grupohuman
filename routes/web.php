@@ -275,6 +275,8 @@ Route::post('/usuario_externos/import', [UsuarioExternoImportController::class, 
         Route::get('/edit/{remision}', [RemisionController::class, 'edit'])->name('remisiones.edit');
         Route::put('/update/{remision}', [RemisionController::class, 'update'])->name('remisiones.update');
         Route::get('/{id}/imprimir', [RemisionController::class, 'imprimir'])->name('remisiones.imprimir');
+        Route::get('/api/por-periodo', [RemisionController::class, 'apiListByPeriod'])
+            ->name('remisiones.api.period');
     });
 
     /*

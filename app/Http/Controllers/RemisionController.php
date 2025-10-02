@@ -10,16 +10,41 @@ use Illuminate\Support\Facades\DB;
 
 class RemisionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $empresaId = session('empresa_local_id');
+        $period = $request->query('period', now()->format('Y-m'));
 
-        $remisiones = Remision::with('usuarioExterno')
-            ->deEmpresa($empresaId)
-            ->latest('fecha')
-            ->paginate(10);
+        if (!preg_match('/^\d{4}-\d{2}$/', $period)) {
+            $period = now()->format('Y-m');
+        }
 
-        return view('remisiones.index', compact('remisiones'));
+        [$year, $month] = explode('-', $period);
+
+        $remisiones = Remision::with(['usuarioExterno'])
+                        ->forMonth((int)$year, (int)$month)
+                        ->orderBy('fecha', 'desc')
+                        ->paginate(25)
+                        ->appends(['period' => $period]);
+
+        return view('remisiones.index', compact('remisiones', 'period'));
+    }
+     public function apiListByPeriod(Request $request)
+    {
+        $period = $request->query('period', now()->format('Y-m'));
+
+        if (!preg_match('/^\d{4}-\d{2}$/', $period)) {
+            return response()->json(['error' => 'Periodo inválido'], 422);
+        }
+
+        [$year, $month] = explode('-', $period);
+
+        $remisiones = Remision::with(['usuarioExterno'])
+                        ->forMonth((int)$year, (int)$month)
+                        ->orderBy('fecha', 'desc')
+                        ->get();
+
+        // Si quieres transformar/ocultar campos sensibles, hazlo aquí.
+        return response()->json(['remisiones' => $remisiones]);
     }
 
     public function create()

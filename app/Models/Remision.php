@@ -47,4 +47,32 @@ class Remision extends Model
     {
         return $query->where('empresa_local_id', $empresaId);
     }
+        public function scopeForMonth($query, int $year, int $month)
+    {
+        return $query->whereYear('fecha', $year)
+                     ->whereMonth('fecha', $month);
+    }
+
+    /**
+     * Acepta 'YYYY-MM' o Date/Carbon. Uso: Remision::forPeriod('2025-09')->get();
+     */
+    public function scopeForPeriod($query, $period)
+    {
+        if ($period instanceof \DateTimeInterface) {
+            $year = $period->format('Y');
+            $month = $period->format('m');
+        } elseif (is_string($period) && preg_match('/^(\d{4})-(\d{2})$/', $period, $m)) {
+            $year = $m[1];
+            $month = $m[2];
+        } else {
+            $year = now()->format('Y');
+            $month = now()->format('m');
+        }
+
+        return $query->whereYear('fecha', $year)
+                     ->whereMonth('fecha', $month);
+    }
+
+    // Ejemplo de relaciones comunes (ajusta nombres si usas otros)
+   
 }
