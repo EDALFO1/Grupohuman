@@ -10,24 +10,28 @@ use Illuminate\Support\Facades\DB;
 
 class RemisionController extends Controller
 {
-    public function index(Request $request)
-    {
-        $period = $request->query('period', now()->format('Y-m'));
+   public function index(Request $request)
+{
+    $empresaId = (int) session('empresa_local_id'); // o auth()->user()->empresa_local_id
 
-        if (!preg_match('/^\d{4}-\d{2}$/', $period)) {
-            $period = now()->format('Y-m');
-        }
+    $period = $request->query('period', now()->format('Y-m'));
 
-        [$year, $month] = explode('-', $period);
-
-        $remisiones = Remision::with(['usuarioExterno'])
-                        ->forMonth((int)$year, (int)$month)
-                        ->orderBy('fecha', 'desc')
-                        ->paginate(25)
-                        ->appends(['period' => $period]);
-
-        return view('remisiones.index', compact('remisiones', 'period'));
+    if (!preg_match('/^\d{4}-\d{2}$/', $period)) {
+        $period = now()->format('Y-m');
     }
+
+    [$year, $month] = explode('-', $period);
+
+    $remisiones = Remision::with(['usuarioExterno'])
+                    ->where('empresa_local_id', $empresaId) // 🔒 filtro por empresa
+                    ->forMonth((int)$year, (int)$month)     // tu scope personalizado
+                    ->orderBy('fecha', 'desc')
+                    ->paginate(25)
+                    ->appends(['period' => $period]);
+
+    return view('remisiones.index', compact('remisiones', 'period'));
+}
+
      public function apiListByPeriod(Request $request)
     {
         $period = $request->query('period', now()->format('Y-m'));
@@ -100,18 +104,15 @@ class RemisionController extends Controller
                     abort(422, 'Debe indicar la fecha de retiro.');
                 }
 
-                // ⚠️ Validación extra: el retiro no puede ser anterior a la afiliación
-                // dentro del MES BASE (mes anterior a la remisión) en regla base-30 (1..30)
                 $fRem  = Carbon::parse($validated['fecha']);
                 $base  = $fRem->copy()->subMonthNoOverflow();
                 $fRet  = Carbon::parse($validated['fecha_retiro'])->startOfDay();
                 $fAf   = $usuario->fecha_afiliacion ? Carbon::parse($usuario->fecha_afiliacion)->startOfDay() : null;
 
-                // El retiro debe ser del mes base y día 1..30 (validación original)
+                // Validación original: retiro dentro del mes base (regla base-30)
                 $this->validarRetiroMesAnteriorBase30($validated['fecha'], $validated['fecha_retiro']);
 
-                // 🚫 NUEVO: si la afiliación cae en ese mismo mes base,
-                // no permitir retiro < afiliación
+                // 🚫 Extra: si la afiliación cae en ese mes base, no permitir retiro < afiliación
                 if ($fAf && $fAf->format('Y-m') === $base->format('Y-m') && $fRet->lt($fAf)) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
                         'fecha_retiro' => "La fecha de retiro no puede ser inferior a la fecha de afiliación del usuario ({$fAf->format('Y-m-d')}).",
@@ -131,7 +132,7 @@ class RemisionController extends Controller
                 $dias
             );
 
-            // 🚫 NUEVO: si es Retiro y quedó en 0 días, bloquear con mensaje claro
+            // 🚫 Si es Retiro y días = 0 → error
             if ($novedad === 'Retiro' && $dias === 0) {
                 $msgAf = $usuario->fecha_afiliacion
                     ? Carbon::parse($usuario->fecha_afiliacion)->format('Y-m-d')
@@ -145,12 +146,12 @@ class RemisionController extends Controller
             $otros = (int) round(($validated['otros_servicios'] ?? 0) / 100) * 100;
             $total = array_sum($valores) + $otros;
 
-            // Consecutivo por empresa (con bloqueo para concurrencia)
+            // 🔢 Consecutivo único por empresa (con lock para concurrencia)
             $ultimoNumero = Remision::where('empresa_local_id', $empresaId)
                 ->lockForUpdate()
                 ->max('numero') ?? 0;
 
-            $nuevoNumero  = $ultimoNumero + 1;
+            $nuevoNumero = $ultimoNumero + 1;
 
             Remision::create([
                 'empresa_local_id'   => $empresaId,
@@ -172,28 +173,30 @@ class RemisionController extends Controller
 }
 
 
+
     public function edit($id)
-    {
-        $empresaId = (int) session('empresa_local_id');
+{
+    $empresaId = (int) session('empresa_local_id');
 
-        $remision = Remision::with([
-                'usuarioExterno.eps',
-                'usuarioExterno.arl',
-                'usuarioExterno.pension',
-                'usuarioExterno.caja'
-            ])
-            ->deEmpresa($empresaId)
-            ->findOrFail($id);
+    $remision = Remision::with([
+            'usuarioExterno.eps',
+            'usuarioExterno.arl',
+            'usuarioExterno.pension',
+            'usuarioExterno.caja'
+        ])
+        ->where('empresa_local_id', $empresaId) // 👈 filtro empresa
+        ->findOrFail($id);
 
-        $remision->fecha = Carbon::parse($remision->fecha);
-        if ($remision->fecha_retiro) {
-            $remision->fecha_retiro = Carbon::parse($remision->fecha_retiro);
-        }
-
-        return view('remisiones.edit', compact('remision'));
+    $remision->fecha = Carbon::parse($remision->fecha);
+    if ($remision->fecha_retiro) {
+        $remision->fecha_retiro = Carbon::parse($remision->fecha_retiro);
     }
 
-    public function update(Request $request, $id)
+    return view('remisiones.edit', compact('remision'));
+}
+
+
+   public function update(Request $request, $id)
 {
     $validated = $request->validate([
         'usuario_externo_id' => 'required|exists:usuario_externos,id',
@@ -207,7 +210,8 @@ class RemisionController extends Controller
 
     try {
         return DB::transaction(function () use ($validated, $id, $empresaId) {
-            $remision = Remision::deEmpresa($empresaId)->findOrFail($id);
+            $remision = Remision::where('empresa_local_id', $empresaId) // 👈 filtro empresa
+                ->findOrFail($id);
 
             $usuario = UsuarioExterno::with(['eps','arl','pension','caja'])
                 ->findOrFail($validated['usuario_externo_id']);
@@ -243,11 +247,8 @@ class RemisionController extends Controller
                     abort(422, 'Debe indicar la fecha de retiro.');
                 }
 
-                // Validación original (mes anterior y día 1..30)
                 $this->validarRetiroMesAnteriorBase30($validated['fecha'], $validated['fecha_retiro']);
 
-                // 🚫 NUEVO: si la afiliación cae en el MISMO mes base,
-                // el retiro no puede ser anterior a la afiliación
                 $fRem = \Carbon\Carbon::parse($validated['fecha']);
                 $base = $fRem->copy()->subMonthNoOverflow();
                 $fRet = \Carbon\Carbon::parse($validated['fecha_retiro'])->startOfDay();
@@ -264,7 +265,6 @@ class RemisionController extends Controller
                 $fechaRetiro = $validated['fecha_retiro'];
             }
 
-            // Cálculo (base-30) vía servicio
             $dias = 0;
             $valores = LiquidacionService::calcular(
                 $usuario,
@@ -274,7 +274,6 @@ class RemisionController extends Controller
                 $dias
             );
 
-            // 🚫 NUEVO: si es Retiro y quedó en 0 días, bloquear con mensaje claro
             if ($novedad === 'Retiro' && $dias === 0) {
                 $msgAf = $usuario->fecha_afiliacion
                     ? \Carbon\Carbon::parse($usuario->fecha_afiliacion)->format('Y-m-d')
@@ -305,15 +304,19 @@ class RemisionController extends Controller
 }
 
 
-    public function destroy($id)
-    {
-        $empresaId = (int) session('empresa_local_id');
 
-        $remision = Remision::deEmpresa($empresaId)->findOrFail($id);
-        $remision->delete();
+public function destroy($id)
+{
+    $empresaId = (int) session('empresa_local_id');
 
-        return redirect()->route('remisiones')->with('success', 'Remisión eliminada correctamente.');
-    }
+    $remision = Remision::where('empresa_local_id', $empresaId) // 👈 filtro empresa
+        ->findOrFail($id);
+
+    $remision->delete();
+
+    return redirect()->route('remisiones')->with('success', 'Remisión eliminada correctamente.');
+}
+
 
     public function buscarUsuario(Request $request, $numero = null)
     {
@@ -396,5 +399,20 @@ public function imprimir($id)
 
     return view('remisiones.imprimir', compact('remision'));
 }
+public function apiPeriod(Request $request)
+{
+    $empresaId = (int) session('empresa_local_id');
+    $period = $request->get('period'); // YYYY-MM
+    [$year, $month] = explode('-', $period);
+
+    $remisiones = Remision::where('empresa_local_id', $empresaId)
+                          ->whereYear('fecha', $year)
+                          ->whereMonth('fecha', $month)
+                          ->with('usuarioExterno')
+                          ->get();
+
+    return response()->json(['remisiones' => $remisiones]);
+}
+
 
 }
