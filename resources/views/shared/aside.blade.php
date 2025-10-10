@@ -1,6 +1,9 @@
 <aside id="sidebar" class="sidebar">
 
   <ul class="sidebar-nav" id="sidebar-nav">
+    {{-- =====================================
+         VISIBLE PARA TODOS LOS USUARIOS
+       ===================================== --}}
 
     <li class="nav-item">
       <a class="nav-link " href="{{ route("home") }}">
@@ -8,7 +11,10 @@
         <span>Panel de Inicio</span>
       </a>
     </li><!-- End Dashboard Nav -->
-
+    {{-- =====================================
+          ADMIN Y USUARIO
+       ===================================== --}}
+     @if(in_array(auth()->user()->rol, ['admin', 'usuario']))
     <li class="nav-item">
       <a class="nav-link collapsed" data-bs-target="#components-nav" data-bs-toggle="collapse" href="#">
         <i class="fa-solid fa-folder-open"></i><span>Administrativo</span><i class="bi bi-chevron-down ms-auto"></i>
@@ -27,7 +33,13 @@
         </li>
       </ul>
     </li><!-- End Components Nav -->
+    @endif
+    {{-- =====================================
+         SOLO ADMIN
+       ===================================== --}}
     
+@if(auth()->user()->rol === 'admin')
+
     <li class="nav-item">
       <a class="nav-link collapsed" data-bs-target="#varios-nav" data-bs-toggle="collapse" href="#">
         <i class="fa-solid fa-user-tie"></i><span>Financiero</span><i class="bi bi-chevron-down ms-auto"></i>
@@ -78,7 +90,8 @@
         </li>
       </ul>
     </li>
-
+@endif
+@if(in_array(auth()->user()->rol, ['admin', 'usuario']))
     <li class="nav-item">
       <a class="nav-link collapsed" data-bs-target="#empresas-nav" data-bs-toggle="collapse" href="#">
         <i class="fa-solid fa-building"></i><span>Empresas</span><i class="bi bi-chevron-down ms-auto"></i>
@@ -96,7 +109,10 @@
         </li>
       </ul>  
     </li><!-- End Register Page Nav -->
+
     
+
+
     <li class="nav-item">
       <a class="nav-link collapsed" data-bs-target="#productos-nav" data-bs-toggle="collapse" href="#">
         <i class="fa-solid fa-sitemap"></i><span>Items</span><i class="bi bi-chevron-down ms-auto"></i>
@@ -108,18 +124,34 @@
           </a>
         </li>
         <li>
-          <a href="{{ route ('productos')}}">
-            <i class="bi bi-send" style="font-size: 1em;"></i><span>Productos</span>
+          <a href="{{ route ('incapacidades.index')}}">
+            <i class="bi bi-send" style="font-size: 1em;"></i><span>Incapacidades</span>
           </a>
         </li>
+        <li>
+          <a href="{{ route ('arl-usuarios.index')}}">
+            <i class="bi bi-send" style="font-size: 1em;"></i><span>Solo Arl</span>
+          </a>
+        </li>
+        
       </ul>
     </li>
 
+    @endif
+    {{-- =====================================
+         SOLO ADMIN
+       ===================================== --}}
+  @if(auth()->user()->rol === 'admin')
     <li class="nav-item">
       <a class="nav-link collapsed" data-bs-target="#libreria-nav" data-bs-toggle="collapse" href="#">
         <i class="fa-solid fa-building"></i><span>Admon de Libreria</span><i class="bi bi-chevron-down ms-auto"></i>
       </a>
       <ul id="libreria-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+        <li>
+          <a href="{{ route ('productos')}}">
+            <i class="bi bi-send" style="font-size: 1em;"></i><span>Productos</span>
+          </a>
+        </li>
         <li>
           <a href="{{ route ('valores.index')}}">
             <i class="bi bi-send" style="font-size: 1em;"></i><span>Valores</span>
@@ -155,16 +187,7 @@
             <i class="bi bi-send" style="font-size: 1em;"></i><span>Subtipos</span>
           </a>
         </li>
-        <li>
-          <a href="{{ route ('incapacidades.index')}}">
-            <i class="bi bi-send" style="font-size: 1em;"></i><span>Incapacidades</span>
-          </a>
-        </li>
-        <li>
-          <a href="{{ route ('arl-usuarios.index')}}">
-            <i class="bi bi-send" style="font-size: 1em;"></i><span>Solo Arl</span>
-          </a>
-        </li>
+        
       </ul>  
     </li>
 
@@ -174,7 +197,7 @@
         <span>Usuarios</span>
       </a>
     </li><!-- End Blank Page Nav -->
-
+@endif
   </ul>
 
 </aside>
