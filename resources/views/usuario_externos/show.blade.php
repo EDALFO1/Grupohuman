@@ -53,7 +53,15 @@
             <p><strong>Estado:</strong> {{ $usuarioExterno->estado ? 'Activo' : 'Inactivo' }}</p>
               </div>
             </div>
-  
+            @if ($usuarioExterno->google_drive_folder_id)
+    <a href="https://drive.google.com/drive/folders/{{ $usuarioExterno->google_drive_folder_id }}"
+       class="btn btn-info" target="_blank" rel="noopener noreferrer">
+       <i class="fas fa-folder-open"></i> Ver documentos en Drive
+    </a>
+@else
+    <p class="text-muted">No hay carpeta de documentos asociada en Google Drive.</p>
+@endif
+
           </div>
         </div>
       </section>

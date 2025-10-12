@@ -282,6 +282,13 @@
         >
     </div>
 </div>
+<div class="mb-3">
+    <label for="google_drive_folder_id" class="form-label">ID de Carpeta en Google Drive</label>
+    <input type="text" name="google_drive_folder_id" id="google_drive_folder_id"
+           class="form-control"
+           value="{{ old('google_drive_folder_id', $usuarioExterno->google_drive_folder_id ?? '') }}">
+</div>
+
 
 @push('scripts')
 <script>

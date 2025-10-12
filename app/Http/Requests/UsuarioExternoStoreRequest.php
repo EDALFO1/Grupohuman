@@ -42,7 +42,9 @@ class UsuarioExternoStoreRequest extends FormRequest
             'cargo'                 => 'required|string',
             'estado'                => 'required|boolean',
             'override_parametros'   => 'sometimes|boolean',
-            'empresa_local_id' => 'required|exists:empresa_local,id',
+            'empresa_local_id' => 'nullable|exists:empresa_local,id',
+            'google_drive_folder_id' => 'nullable|string|max:255',
+
 
         ];
     }

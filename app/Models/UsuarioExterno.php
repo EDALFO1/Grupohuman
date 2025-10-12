@@ -19,7 +19,7 @@ class UsuarioExterno extends Model
         'fecha_afiliacion','sexo','eps_id','arl_id','pension_id','caja_id',
         'subtipo_cotizantes_id','empresa_local_id','empresa_externa_id',
         'sueldo','admon','seg_exequial','mora','otros_servicios',
-        'override_parametros','cargo','estado','novedad','fecha_retiro',
+        'override_parametros','cargo','estado','novedad','fecha_retiro','google_drive_folder_id',
     ];
 
     protected $casts = [

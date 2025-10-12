@@ -89,6 +89,7 @@ class UsuarioExternoController extends Controller
 
     public function update(Request $request, UsuarioExterno $usuarioExterno)
 {
+    // Validación principal (añadimos google_drive_folder_id)
     $validated = $request->validate([
         'documento_id'            => 'required|exists:documentos,id',
         'asesor_id'               => 'required|exists:asesores,id',
@@ -108,7 +109,6 @@ class UsuarioExternoController extends Controller
         'arl_id'                  => 'required|exists:arls,id',
         'pension_id'              => 'required|exists:pensions,id',
         'caja_id'                 => 'required|exists:cajas,id',
-        // 👇 no exigimos empresa_local_id aquí; lo validamos condicionalmente
         'empresa_externa_id'      => 'required|exists:empresa_externas,id',
         'subtipo_cotizantes_id'   => 'required|exists:subtipo_cotizantes,id',
         'sueldo'                  => 'required|numeric|min:0',
@@ -120,9 +120,17 @@ class UsuarioExternoController extends Controller
         'estado'                  => 'required|boolean',
         'novedad'                 => ['required', \Illuminate\Validation\Rule::in(['Ingreso','Retiro'])],
         'fecha_retiro'            => 'nullable|date|after_or_equal:fecha_afiliacion|required_if:novedad,Retiro',
+
+        // <-- Añadimos google_drive_folder_id aquí (puede venir como ID puro o URL completa)
+        'google_drive_folder_id'  => 'nullable|string|max:255',
     ], [
         'fecha_retiro.required_if' => 'Debe indicar la fecha de retiro cuando la novedad es Retiro.',
     ]);
+
+    // Normalizar google_drive_folder_id (extraer solo el id si el usuario pegó una URL)
+    if (!empty($validated['google_drive_folder_id'])) {
+        $validated['google_drive_folder_id'] = $this->extractDriveFolderId($validated['google_drive_folder_id']);
+    }
 
     // ¿Se está REACTIVANDO? (antes inactivo → ahora activo)
     $reactivando = (!$usuarioExterno->estado && (bool)$validated['estado'] === true);
@@ -147,6 +155,7 @@ class UsuarioExternoController extends Controller
         }
     }
 
+    // Ahora actualizamos incluyendo google_drive_folder_id
     $usuarioExterno->update($validated);
 
     // (Opcional) Si quieres marcar el período activo al reactivar:
@@ -159,6 +168,33 @@ class UsuarioExternoController extends Controller
             ? 'Usuario reactivado correctamente (Ingreso).'
             : 'Usuario Externo actualizado correctamente.'
         );
+}
+
+/**
+ * Extrae el ID de carpeta de Google Drive de una URL o devuelve el valor limpio.
+ * Ejemplos aceptados:
+ *  - https://drive.google.com/drive/folders/1xY...ABc?hl=es  => 1xY...ABc
+ *  - 1xY...ABc                                            => 1xY...ABc
+ */
+private function extractDriveFolderId(string $input): string
+{
+    // Si contiene "folders/", extraemos lo que sigue hasta ? o / o final
+    if (preg_match('#/folders/([a-zA-Z0-9_-]+)#', $input, $m)) {
+        return $m[1];
+    }
+
+    // Si fue pegado como URL con id=... (caso alterno), extraemos id=...
+    if (preg_match('/[?&]id=([a-zA-Z0-9_-]+)/', $input, $m2)) {
+        return $m2[1];
+    }
+
+    // Si trae parámetros (?hl=es), los quitamos
+    if (strpos($input, '?') !== false) {
+        $input = strstr($input, '?', true);
+    }
+
+    // Trim final y devolver
+    return trim($input);
 }
 
 
