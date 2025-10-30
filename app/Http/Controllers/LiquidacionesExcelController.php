@@ -497,7 +497,16 @@ private function llenarEncabezado(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet 
 
 
 public function descargarPorCaja(Request $request): \Symfony\Component\HttpFoundation\Response
-{
+{  
+    if ($request->query('ping') === '1') {
+        return response()->json([
+            'ok' => true,
+            'here' => 'LiquidacionesExcelController@descargarPorCaja',
+            'method' => $request->method(),
+            'empresa_local_id' => (int)($request->input('empresa_local_id') ?: session('empresa_local_id')),
+            'periodo' => $request->input('periodo') ?: now()->format('Y-m'),
+        ]);
+    }
     $request->validate([
         'empresa_local_id' => ['required', 'integer', 'exists:empresa_local,id'],
         'periodo'          => ['required', 'regex:/^\d{4}-\d{2}($|-\d{2}$)/'],

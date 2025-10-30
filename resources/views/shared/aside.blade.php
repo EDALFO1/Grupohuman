@@ -107,6 +107,11 @@
             <i class="bi bi-buildings-fill" style="font-size: 1em;"></i><span>Empresa Externa</span>
           </a>
         </li>
+         <li>
+          <a href="{{ route ('facturas')}}">
+            <i class="bi bi-buildings-fill" style="font-size: 1em;"></i><span>Factura</span>
+          </a>
+        </li>
       </ul>  
     </li><!-- End Register Page Nav -->
 
@@ -118,6 +123,15 @@
         <i class="fa-solid fa-sitemap"></i><span>Items</span><i class="bi bi-chevron-down ms-auto"></i>
       </a>
       <ul id="productos-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+
+    
+       <li>
+          <a href="{{ route ('empresa-claves.index')}}">
+            <i class="bi bi-send" style="font-size: 1em;"></i><span>Claves</span>
+          </a>
+        </li>
+
+
         <li>
           <a href="{{ route ('asesores')}}">
             <i class="bi bi-send" style="font-size: 1em;"></i><span>Asesores</span>
@@ -150,6 +164,11 @@
         <li>
           <a href="{{ route ('productos')}}">
             <i class="bi bi-send" style="font-size: 1em;"></i><span>Productos</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ route ('servicios-externos.index')}}">
+            <i class="bi bi-send" style="font-size: 1em;"></i><span>Servicios</span>
           </a>
         </li>
         <li>

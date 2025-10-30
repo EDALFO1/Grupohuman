@@ -52,7 +52,12 @@
                                     <button class="btn btn-danger btn-sm" onclick="return confirm('¿Deseas eliminar esta factura?')">Eliminar</button>
                                 </form>
                                 <a href="{{ route('facturas.imprimir', $factura) }}" target="_blank" class="btn btn-info btn-sm">Imprimir</a>
-
+                                <form action="{{ route('facturas.enviar', $factura) }}" method="POST" style="display:inline;">
+    @csrf
+    <button type="submit" class="btn btn-success btn-sm">
+        Enviar a DIAN
+    </button>
+</form>
                             </td>
                         </tr>
                     @endforeach

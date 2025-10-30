@@ -55,5 +55,9 @@ class EmpresaLocal extends Model
 {
     return $this->hasMany(Remision::class);
 }
+public function claves()
+{
+    return $this->hasMany(\App\Models\EmpresaClave::class, 'empresa_local_id');
+}
 
 }
