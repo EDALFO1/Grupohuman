@@ -95,4 +95,17 @@ class ArlUsuario extends Model
         $adm = (float)($this->administracion > 0 ? $this->administracion : ($v->administracion ?? 0));
         return $adm;
     }
+    // En App\Models\ArlUsuario
+public function setFechaRetiroAttribute($value)
+{
+    $this->attributes['fecha_retiro'] = $value ?: null;
+}
+// ----- Scopes -----
+public function scopeEstado($q, $estado)
+{
+    if ($estado === null || $estado === '' || $estado === 'all') return $q;
+    // Acepta '1'/'0' o booleanos
+    return $q->where('estado', (int) $estado);
+}
+
 }

@@ -82,7 +82,7 @@
 <div class="row mt-3">
   <div class="col-md-4">
     <label>Estado</label>
-    <select name="estado" class="form-control" required>
+    <select name="estado" id="estado" class="form-control" required>
       <option value="1" {{ old('estado', $u->estado ?? 1) == 1 ? 'selected' : '' }}>Activo</option>
       <option value="0" {{ old('estado', $u->estado ?? 1) == 0 ? 'selected' : '' }}>Inactivo</option>
     </select>
@@ -90,27 +90,45 @@
 
   <div class="col-md-4">
     <label>Fecha de retiro</label>
-    <input type="date" name="fecha_retiro" class="form-control"
+    <input type="date" name="fecha_retiro" id="fecha_retiro" class="form-control"
            value="{{ old('fecha_retiro', optional($u->fecha_retiro)->format('Y-m-d')) }}">
   </div>
-
- 
 </div>
-
 
 @push('scripts')
 <script>
 (function(){
   function n(v){ return isNaN(v) ? 0 : parseFloat(v); }
-  function fmt0(v){ 
-    try { return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(v); } 
+  function fmt0(v){
+    try { return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(v); }
     catch(e){ return (Math.round(v)).toString(); }
   }
 
-  const selArl = document.getElementById('arl_id');
-  const inputBase = document.getElementById('base_cotizacion');
-  const inputAdm  = document.getElementById('administracion');
-  const outValor  = document.getElementById('valor_calculado');
+  const selArl   = document.getElementById('arl_id');
+  const inputBase= document.getElementById('base_cotizacion');
+  const inputAdm = document.getElementById('administracion');
+  const outValor = document.getElementById('valor_calculado');
+
+  // --- NUEVO: controles de estado/fecha de retiro ---
+  const selEstado   = document.getElementById('estado');
+  const inputRetiro = document.getElementById('fecha_retiro');
+
+  function toggleRetiro(){
+    const activo = selEstado?.value === '1';
+    if (activo) {
+      if (inputRetiro) {
+        inputRetiro.value = '';
+        inputRetiro.disabled = true;
+        inputRetiro.classList.add('bg-light');
+      }
+    } else {
+      if (inputRetiro) {
+        inputRetiro.disabled = false;
+        inputRetiro.classList.remove('bg-light');
+      }
+    }
+  }
+  // ---------------------------------------------------
 
   function calc(){
     const opt  = selArl ? selArl.options[selArl.selectedIndex] : null;
@@ -130,9 +148,12 @@
     inputAdm?.addEventListener(ev, calc);
   });
 
-  calc(); // inicial
+  // Eventos para estado/fecha_retiro
+  selEstado?.addEventListener('change', toggleRetiro);
+
+  // Inicialización
+  toggleRetiro();
+  calc();
 })();
 </script>
 @endpush
-
-

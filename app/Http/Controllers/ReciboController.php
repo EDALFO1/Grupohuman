@@ -733,9 +733,104 @@ class ReciboController extends Controller
     }
 
     public function retirosMasivosExport(Request $request)
-    {
-        // ... (tu lógica tal cual)
+{
+    // ping opcional para probar rápidamente si entra
+    if ($request->query('ping') === '1') {
+        return response()->json([
+            'ok' => true,
+            'here' => 'ReciboController@retirosMasivosExport',
+            'empresa_local_id' => (int)($request->input('empresa_local_id') ?: session('empresa_local_id')),
+            'periodo' => $request->input('periodo') ?: now()->format('Y-m'),
+            'confirm' => $request->input('confirm'),
+        ]);
     }
+
+    $validated = $request->validate([
+        'empresa_local_id' => ['required','integer','exists:empresa_local,id'],
+        'periodo'          => ['required','regex:/^\d{4}-\d{2}$/'], // YYYY-MM
+        'confirm'          => ['nullable','in:1'],
+    ]);
+
+    $empresaId = (int) $validated['empresa_local_id'];
+    $periodo   = $validated['periodo'];              // p.ej. 2025-03
+    $anchor    = \Carbon\Carbon::createFromFormat('Y-m-d', "{$periodo}-01");
+    $retiroDia = $anchor->copy()->subMonthNoOverflow()->endOfMonth()->toDateString(); // “retiro 1 día”
+
+    // Traer PENDIENTES (tu misma query base)
+    $pendientes = $this->usuariosPendientesDeReciboQuery($empresaId, $periodo)
+        ->with(['documento','eps','arl','pension','caja'])
+        ->orderBy('id')
+        ->get();
+
+    if ($pendientes->isEmpty()) {
+        return back()->with('info', "No hay usuarios pendientes para el período {$periodo}.");
+    }
+
+    // ====== Armar Excel sencillo ======
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Retiros');
+
+    $headers = [
+        'A' => 'ID Usuario',
+        'B' => 'Documento',
+        'C' => 'Número',
+        'D' => 'Primer Apellido',
+        'E' => 'Segundo Apellido',
+        'F' => 'Primer Nombre',
+        'G' => 'Segundo Nombre',
+        'H' => 'EPS',
+        'I' => 'ARL',
+        'J' => 'Pensión',
+        'K' => 'Caja',
+        'L' => 'Fecha Retiro (1 día)',
+    ];
+    foreach ($headers as $col => $title) {
+        $sheet->setCellValue("{$col}1", $title);
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+
+    $r = 2;
+    foreach ($pendientes as $u) {
+        $sheet->setCellValue("A{$r}", $u->id);
+        $sheet->setCellValue("B{$r}", $u->documento->nombre ?? 'CC');
+        $sheet->setCellValueExplicit("C{$r}", (string)($u->numero ?? ''), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+        $sheet->setCellValue("D{$r}", $u->primer_apellido);
+        $sheet->setCellValue("E{$r}", $u->segundo_apellido);
+        $sheet->setCellValue("F{$r}", $u->primer_nombre);
+        $sheet->setCellValue("G{$r}", $u->segundo_nombre);
+        $sheet->setCellValue("H{$r}", $u->eps->nombre ?? '');
+        $sheet->setCellValue("I{$r}", $u->arl->nombre ?? '');
+        $sheet->setCellValue("J{$r}", $u->pension->nombre ?? '');
+        $sheet->setCellValue("K{$r}", $u->caja->nombre ?? '');
+        $sheet->setCellValue("L{$r}", $retiroDia);
+        $r++;
+    }
+
+    // ====== Marcar INACTIVOS (si confirm=1) ======
+    if ($request->boolean('confirm')) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($pendientes, $retiroDia) {
+            foreach ($pendientes as $u) {
+                $u->forceFill([
+                    'estado'       => false,
+                    'novedad'      => 'Retiro',
+                    'fecha_retiro' => $retiroDia,
+                ])->save();
+            }
+        });
+    }
+
+    // Descargar
+    $filename = "Retiros_masivos_{$periodo}.xlsx";
+    $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
+
+    return response()->streamDownload(function () use ($writer) {
+        $writer->save('php://output');
+    }, $filename, [
+        'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ]);
+}
+
 
     /* --------- Query base de pendientes --------- */
     private function usuariosPendientesDeReciboQuery(int $empresaId, string $periodo)

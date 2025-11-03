@@ -8,19 +8,42 @@
     <div class="card">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center pt-3">
+
+          {{-- FILTROS --}}
           <form class="d-flex" method="GET" action="{{ route('arl-usuarios.index') }}">
-            <input type="text" name="q" class="form-control me-2" value="{{ request('q') }}" placeholder="Buscar por número o nombre">
+            <input type="text" name="q" class="form-control me-2" 
+                   value="{{ request('q') }}" placeholder="Buscar por número o nombre">
+
+            <select name="estado" class="form-select me-2" onchange="this.form.submit()">
+              <option value=""  {{ request('estado', '') === '' ? 'selected' : '' }}>Todos</option>
+              <option value="1" {{ request('estado') === '1' ? 'selected' : '' }}>Activos</option>
+              <option value="0" {{ request('estado') === '0' ? 'selected' : '' }}>Inactivos</option>
+            </select>
+
             <select name="per_page" class="form-select me-2" onchange="this.form.submit()">
               @foreach([10,25,50,100,200] as $n)
-                <option value="{{ $n }}" {{ (int)request('per_page',10) === $n ? 'selected' : '' }}>{{ $n }}</option>
+                <option value="{{ $n }}" {{ (int)request('per_page',10) === $n ? 'selected' : '' }}>
+                  {{ $n }}
+                </option>
               @endforeach
             </select>
-            <button class="btn btn-outline-secondary">Filtrar</button>
+
+            <button class="btn btn-outline-secondary me-2">Filtrar</button>
+
+            {{-- Botón Exportar conservando filtros --}}
+            <a class="btn btn-success"
+               href="{{ route('arl-usuarios.export', array_filter([
+                    'q' => request('q'),
+                    'estado' => request('estado'),
+                ])) }}">
+              Exportar Excel
+            </a>
           </form>
 
           <a href="{{ route('arl-usuarios.create') }}" class="btn btn-primary">Nuevo</a>
         </div>
 
+        {{-- ALERTAS --}}
         @if(session('success'))
           <div class="alert alert-success mt-3">{{ session('success') }}</div>
         @endif
@@ -28,8 +51,9 @@
           <div class="alert alert-danger mt-3">{{ session('error') }}</div>
         @endif
 
+        {{-- TABLA --}}
         <div class="table-responsive mt-3">
-          <table id="tabla-arl-usuarios" class="table">
+          <table id="tabla-arl-usuarios" class="table table">
             <thead>
               <tr>
                 <th>Tipo Doc</th>
@@ -64,8 +88,10 @@
                   </td>
                   <td>{{ optional($u->fecha_retiro)->format('Y-m-d') }}</td>
                   <td class="text-end">
-                    <a class="btn btn-sm btn-warning" href="{{ route('arl-usuarios.edit', $u) }}">Editar</a>
-                    <form class="d-inline" method="POST" action="{{ route('arl-usuarios.destroy', $u) }}"
+                    <a class="btn btn-sm btn-warning" 
+                       href="{{ route('arl-usuarios.edit', $u) }}">Editar</a>
+                    <form class="d-inline" method="POST" 
+                          action="{{ route('arl-usuarios.destroy', $u) }}"
                           onsubmit="return confirm('¿Eliminar registro?');">
                       @csrf @method('DELETE')
                       <button class="btn btn-sm btn-danger">Eliminar</button>

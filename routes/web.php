@@ -353,15 +353,19 @@ Route::middleware(['rol:admin,empresa,usuario,invitado'])->group(function () {
     // PLANES
     Route::get('/planes', [PlanesController::class, 'index'])->name('planes.index');
 
-    // ARL-USUARIOS
-    Route::prefix('arl-usuarios')->as('arl-usuarios.')->group(function () {
-        Route::get('/', [ArlUsuarioController::class, 'index'])->name('index');
-        Route::get('/create', [ArlUsuarioController::class, 'create'])->name('create');
-        Route::post('/', [ArlUsuarioController::class, 'store'])->name('store');
-        Route::get('/{arlUsuario}/edit', [ArlUsuarioController::class, 'edit'])->name('edit');
-        Route::put('/{arlUsuario}', [ArlUsuarioController::class, 'update'])->name('update');
-        Route::delete('/{arlUsuario}', [ArlUsuarioController::class, 'destroy'])->name('destroy');
-    });
+   // ARL-USUARIOS
+Route::prefix('arl-usuarios')->as('arl-usuarios.')->group(function () {
+    // 👇 Export debe ser /export y el name solo 'export'
+    Route::get('/export', [ArlUsuarioController::class, 'export'])->name('export');
+
+    Route::get('/', [ArlUsuarioController::class, 'index'])->name('index');
+    Route::get('/create', [ArlUsuarioController::class, 'create'])->name('create');
+    Route::post('/', [ArlUsuarioController::class, 'store'])->name('store');
+    Route::get('/{arlUsuario}/edit', [ArlUsuarioController::class, 'edit'])->name('edit');
+    Route::put('/{arlUsuario}', [ArlUsuarioController::class, 'update'])->name('update');
+    Route::delete('/{arlUsuario}', [ArlUsuarioController::class, 'destroy'])->name('destroy');
+});
+
 
     // EMPRESA CLAVES
     Route::prefix('empresa-claves')->as('empresa-claves.')->group(function () {
