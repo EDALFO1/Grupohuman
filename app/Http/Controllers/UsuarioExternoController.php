@@ -16,9 +16,14 @@ use App\Exports\UsuarioExternosTemplateExport;
 
 class UsuarioExternoController extends Controller
 {
-    public function index(Request $request)
+    // App\Http\Controllers\UsuarioExternoController.php
+
+public function index(Request $request)
 {
     $empresaLocalId = session('empresa_local_id');
+
+    // término de búsqueda (string() evita nulls; toString() asegura string)
+    $term = $request->string('q')->toString();
 
     // Tamaños de página permitidos
     $allowed = [10, 25, 50, 100, 200];
@@ -31,9 +36,10 @@ class UsuarioExternoController extends Controller
             'documento','eps','arl','pension','caja','asesor','empresaLocal','empresaExterna'
         ])
         ->when(!$request->boolean('all') && $empresaLocalId, fn($q) => $q->deEmpresa($empresaLocalId))
+        ->buscar($term) // 👈 APLICA EL FILTRO DE BÚSQUEDA
         ->orderBy('id', 'desc')
         ->paginate($perPage)
-        ->appends($request->query()); // preserva TODOS los parámetros de la URL
+        ->appends($request->query()); // preserva TODOS los parámetros
 
     return view('usuario_externos.index', compact('usuarios'));
 }
@@ -120,7 +126,7 @@ class UsuarioExternoController extends Controller
         'estado'                  => 'required|boolean',
         'novedad'                 => ['required', \Illuminate\Validation\Rule::in(['Ingreso','Retiro'])],
         'fecha_retiro'            => 'nullable|date|after_or_equal:fecha_afiliacion|required_if:novedad,Retiro',
-
+        'observaciones'           => 'nullable|string|max:2000',
         // <-- Añadimos google_drive_folder_id aquí (puede venir como ID puro o URL completa)
         'google_drive_folder_id'  => 'nullable|string|max:255',
     ], [

@@ -28,6 +28,36 @@
                             </div>
                         @endif
 
+                        <form method="GET" action="{{ route('usuario_externos') }}" class="row g-2 mb-3">
+    {{-- Preservar TODOS los parámetros actuales excepto q y page --}}
+    @foreach(request()->except('q', 'page') as $k => $v)
+        @if(is_array($v))
+            @foreach($v as $vv)
+                <input type="hidden" name="{{ $k }}[]" value="{{ $vv }}">
+            @endforeach
+        @else
+            <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+        @endif
+    @endforeach
+
+    <div class="col-md-8">
+        <input
+            type="search"
+            name="q"
+            class="form-control"
+            placeholder="Buscar por número o nombre (p. ej. 1234, Ana, Pérez)..."
+            value="{{ request('q') }}"
+        >
+    </div>
+    <div class="col-md-4 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Buscar</button>
+        @if(request('q'))
+            <a href="{{ route('usuario_externos', request()->except('q','page')) }}" class="btn btn-outline-secondary">Limpiar</a>
+        @endif
+    </div>
+</form>
+
+
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h1 class="h4 m-0">Usuarios Externos</h1>
 

@@ -47,6 +47,7 @@ class UsuarioExternoUpdateRequest extends FormRequest
             'novedad'               => 'required|in:Ingreso,Retiro',
             'fecha_retiro'          => 'nullable|date|after_or_equal:fecha_afiliacion',
             'override_parametros'   => 'sometimes|boolean',
+            'observaciones'         => 'nullable|string|max:2000',
         ];
     }
 

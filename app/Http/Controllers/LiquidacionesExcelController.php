@@ -190,6 +190,7 @@ private function llenarEncabezado(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet 
     $sheet->setCellValue('A10', $periodoPension);
     $sheet->setCellValue('B10', $periodoPension);
     $sheet->setCellValue('C10', $periodoSalud);
+    $sheet->setCellValue('G10', 1);
 }
 
 

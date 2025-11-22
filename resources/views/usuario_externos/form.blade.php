@@ -282,6 +282,18 @@
         >
     </div>
 </div>
+<div class="row mt-3">
+    <div class="col-md-12">
+        <label for="observaciones" class="form-label">Observaciones</label>
+        <textarea
+            name="observaciones"
+            id="observaciones"
+            class="form-control"
+            rows="3"
+        >{{ old('observaciones', $usuarioExterno->observaciones ?? '') }}</textarea>
+    </div>
+</div>
+
 <div class="mb-3">
     <label for="google_drive_folder_id" class="form-label">ID de Carpeta en Google Drive</label>
     <input type="text" name="google_drive_folder_id" id="google_drive_folder_id"

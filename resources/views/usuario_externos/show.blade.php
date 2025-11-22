@@ -51,6 +51,12 @@
             <p><strong>Otros servicios:</strong> ${{ number_format($usuarioExterno->otros_servicios ?? 0, 2) }}</p>
             <p><strong>Cargo:</strong> {{ $usuarioExterno->cargo }}</p>
             <p><strong>Estado:</strong> {{ $usuarioExterno->estado ? 'Activo' : 'Inactivo' }}</p>
+
+            <p>
+    <strong>Observaciones:</strong><br>
+    {{ $usuarioExterno->observaciones ?? 'Sin observaciones' }}
+</p>
+
               </div>
             </div>
             @if ($usuarioExterno->google_drive_folder_id)

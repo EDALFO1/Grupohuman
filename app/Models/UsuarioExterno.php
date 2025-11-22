@@ -20,6 +20,7 @@ class UsuarioExterno extends Model
         'subtipo_cotizantes_id','empresa_local_id','empresa_externa_id',
         'sueldo','admon','seg_exequial','mora','otros_servicios',
         'override_parametros','cargo','estado','novedad','fecha_retiro','google_drive_folder_id',
+        'observaciones',
     ];
 
     protected $casts = [
@@ -100,18 +101,28 @@ class UsuarioExterno extends Model
         return $q->where('estado', true);
     }
 
-    public function scopeBuscar($q, ?string $term)
-    {
-        if (!$term) return $q;
-        $t = trim($term);
-        return $q->where(function ($qq) use ($t) {
-            $qq->where('numero', 'like', "%{$t}%")
-               ->orWhere('primer_nombre', 'like', "%{$t}%")
-               ->orWhere('segundo_nombre', 'like', "%{$t}%")
-               ->orWhere('primer_apellido', 'like', "%{$t}%")
-               ->orWhere('segundo_apellido', 'like', "%{$t}%");
-        });
-    }
+    // App\Models\UsuarioExterno.php
+
+public function scopeBuscar($q, ?string $term)
+{
+    if (!$term = trim((string)$term)) return $q;
+
+    // Optimiza búsquedas numéricas exactas de documento
+    return $q->where(function ($qq) use ($term) {
+        // Si el término es “muy” numérico, intenta match exacto primero
+        if (preg_match('/^\d{4,}$/', $term)) {
+            $qq->where('numero', $term);
+        } else {
+            $qq->where('numero', 'like', "%{$term}%");
+        }
+
+        $qq->orWhere('primer_nombre', 'like', "%{$term}%")
+           ->orWhere('segundo_nombre', 'like', "%{$term}%")
+           ->orWhere('primer_apellido', 'like', "%{$term}%")
+           ->orWhere('segundo_apellido', 'like', "%{$term}%");
+    });
+}
+
 
     // ----- Relaciones -----
     public function documento()      { return $this->belongsTo(Documento::class); }
