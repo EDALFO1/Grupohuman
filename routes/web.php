@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\SeleccionarEmpresaMiddleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\{
     AuthController,
     Dashboard,
@@ -33,7 +34,10 @@ use App\Http\Controllers\{
     EmpresaClaveController,
     ServicioExternoController,
     ExportBatchController,
+    NotaController,
 };
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -59,6 +63,11 @@ Route::get('/cambiar-empresa', function () {
 |--------------------------------------------------------------------------
 | RUTAS AUTENTICADAS + EMPRESA SELECCIONADA
 |--------------------------------------------------------------------------
+|
+| TODO lo que hay dentro de este group tiene:
+|   - Usuario logueado (auth)
+|   - Empresa seleccionada (SeleccionarEmpresaMiddleware)
+|
 */
 Route::middleware(['auth', SeleccionarEmpresaMiddleware::class])->group(function () {
 
@@ -131,261 +140,261 @@ Route::middleware(['auth', SeleccionarEmpresaMiddleware::class])->group(function
             ->name('exportaciones.prepararPorCaja');
 
         // Descargar por caja directo (lo que usa el <form method="POST">)
-        
         Route::post('/descargar-por-caja', [LiquidacionesExcelController::class, 'descargarPorCaja'])
             ->name('exportaciones.descargarPorCaja');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | 🔐 RUTAS SOLO PARA ADMIN O EMPRESA (además de estar logueado)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['rol:admin,empresa'])->group(function () {
+
+        // USUARIOS
+        Route::prefix('usuarios')->group(function () {
+            Route::get('/', [usuarios::class, 'index'])->name('usuarios');
+            Route::get('/create', [usuarios::class, 'create'])->name('usuarios.create');
+            Route::post('/store', [usuarios::class, 'store'])->name('usuarios.store');
+            Route::get('/show/{id}', [usuarios::class, 'show'])->name('usuarios.show');
+            Route::delete('/destroy/{id}', [usuarios::class, 'destroy'])->name('usuarios.destroy');
+            Route::get('/edit/{id}', [usuarios::class, 'edit'])->name('usuarios.edit');
+            Route::put('/update/{id}', [usuarios::class, 'update'])->name('usuarios.update');
+            Route::get('/tbody', [usuarios::class, 'tbody'])->name('usuarios.tbody');
+            Route::get('/cambiar-estado/{id}/{estado}', [usuarios::class, 'estado'])->name('usuarios.estado');
+            Route::get('/cambiar-password/{id}/{password}', [usuarios::class, 'cambio_password'])->name('usuarios.password');
+        });
+
+        // DOCUMENTOS
+        Route::prefix('documentos')->group(function () {
+            Route::get('/', [DocumentoController::class, 'index'])->name('documentos');
+            Route::get('/create', [DocumentoController::class, 'create'])->name('documentos.create');
+            Route::post('/store', [DocumentoController::class, 'store'])->name('documentos.store');
+            Route::get('/show/{documento}', [DocumentoController::class, 'show'])->name('documentos.show');
+            Route::delete('/destroy/{documento}', [DocumentoController::class, 'destroy'])->name('documentos.destroy');
+            Route::get('/edit/{documento}', [DocumentoController::class, 'edit'])->name('documentos.edit');
+            Route::put('/update/{documento}', [DocumentoController::class, 'update'])->name('documentos.update');
+        });
+
+        // ARLS
+        Route::prefix('arls')->group(function () {
+            Route::get('/', [ArlController::class, 'index'])->name('arls');
+            Route::get('/create', [ArlController::class, 'create'])->name('arls.create');
+            Route::post('/store', [ArlController::class, 'store'])->name('arls.store');
+            Route::get('/show/{arl}', [ArlController::class, 'show'])->name('arls.show');
+            Route::delete('/destroy/{arl}', [ArlController::class, 'destroy'])->name('arls.destroy');
+            Route::get('/edit/{arl}', [ArlController::class, 'edit'])->name('arls.edit');
+            Route::put('/update/{arl}', [ArlController::class, 'update'])->name('arls.update');
+        });
+
+        // EPS
+        Route::prefix('eps')->group(function () {
+            Route::get('/', [EpsController::class, 'index'])->name('eps');
+            Route::get('/create', [EpsController::class, 'create'])->name('eps.create');
+            Route::post('/store', [EpsController::class, 'store'])->name('eps.store');
+            Route::get('/show/{eps}', [EpsController::class, 'show'])->name('eps.show');
+            Route::delete('/destroy/{eps}', [EpsController::class, 'destroy'])->name('eps.destroy');
+            Route::get('/edit/{eps}', [EpsController::class, 'edit'])->name('eps.edit');
+            Route::put('/update/{eps}', [EpsController::class, 'update'])->name('eps.update');
+        });
+
+        // PENSIONES
+        Route::prefix('pensions')->group(function () {
+            Route::get('/', [PensionController::class, 'index'])->name('pensions');
+            Route::get('/create', [PensionController::class, 'create'])->name('pensions.create');
+            Route::post('/store', [PensionController::class, 'store'])->name('pensions.store');
+            Route::get('/show/{pension}', [PensionController::class, 'show'])->name('pensions.show');
+            Route::delete('/destroy/{pension}', [PensionController::class, 'destroy'])->name('pensions.destroy');
+            Route::get('/edit/{pension}', [PensionController::class, 'edit'])->name('pensions.edit');
+            Route::put('/update/{pension}', [PensionController::class, 'update'])->name('pensions.update');
+        });
+
+        // CAJAS
+        Route::prefix('cajas')->group(function () {
+            Route::get('/', [CajaController::class, 'index'])->name('cajas');
+            Route::get('/create', [CajaController::class, 'create'])->name('cajas.create');
+            Route::post('/store', [CajaController::class, 'store'])->name('cajas.store');
+            Route::get('/edit/{caja}', [CajaController::class, 'edit'])->name('cajas.edit');
+            Route::put('/update/{caja}', [CajaController::class, 'update'])->name('cajas.update');
+            Route::delete('/destroy/{caja}', [CajaController::class, 'destroy'])->name('cajas.destroy');
+        });
+
+        // FACTURAS
+        Route::prefix('facturas')->group(function () {
+            Route::get('/', [FacturaController::class, 'index'])->name('facturas');
+            Route::get('/create', [FacturaController::class, 'create'])->name('facturas.create');
+            Route::post('/store', [FacturaController::class, 'store'])->name('facturas.store');
+            Route::get('/show/{factura}', [FacturaController::class, 'show'])->name('facturas.show');
+            Route::get('/edit/{factura}', [FacturaController::class, 'edit'])->name('facturas.edit');
+            Route::put('/update/{factura}', [FacturaController::class, 'update'])->name('facturas.update');
+            Route::delete('/destroy/{factura}', [FacturaController::class, 'destroy'])->name('facturas.destroy');
+            Route::get('/{id}/imprimir', [FacturaController::class, 'imprimir'])->name('facturas.imprimir');
+
+            Route::post('/{factura}/enviar', [FacturaDianController::class, 'enviar'])->name('facturas.enviar');
+        });
+
+        // PRODUCTOS
+        Route::prefix('productos')->group(function () {
+            Route::get('/', [ProductoController::class, 'index'])->name('productos');
+            Route::get('/create', [ProductoController::class, 'create'])->name('productos.create');
+            Route::post('/store', [ProductoController::class, 'store'])->name('productos.store');
+            Route::get('/show/{producto}', [ProductoController::class, 'show'])->name('productos.show');
+            Route::get('/edit/{producto}', [ProductoController::class, 'edit'])->name('productos.edit');
+            Route::put('/update/{producto}', [ProductoController::class, 'update'])->name('productos.update');
+            Route::delete('/destroy/{producto}', [ProductoController::class, 'destroy'])->name('productos.destroy');
+        });
+
+        // VALORES
+        Route::prefix('valores')->group(function () {
+            Route::get('/valores', [ValorController::class, 'index'])->name('valores.index');
+            Route::get('/valores/crear', [ValorController::class, 'create'])->name('valores.create');
+            Route::post('/valores', [ValorController::class, 'store'])->name('valores.store');
+            Route::get('/valores/{valor}/editar', [ValorController::class, 'edit'])->name('valores.edit');
+            Route::put('/valores/{valor}', [ValorController::class, 'update'])->name('valores.update');
+            Route::delete('/valores/{valor}', [ValorController::class, 'destroy'])->name('valores.destroy');
+        });
+
+        // SUBTIPOS COTIZANTE
+        Route::prefix('subtipos')->group(function () {
+            Route::get('/', [SubtipoCotizanteController::class, 'index'])->name('subtipo_cotizantes');
+            Route::get('/create', [SubtipoCotizanteController::class, 'create'])->name('subtipo_cotizantes.create');
+            Route::post('/', [SubtipoCotizanteController::class, 'store'])->name('subtipo_cotizantes.store');
+            Route::get('/{subtipo_cotizante}/edit', [SubtipoCotizanteController::class, 'edit'])->name('subtipo_cotizantes.edit');
+            Route::put('/{subtipo_cotizante}', [SubtipoCotizanteController::class, 'update'])->name('subtipo_cotizantes.update');
+            Route::delete('/{subtipo_cotizante}', [SubtipoCotizanteController::class, 'destroy'])->name('subtipo_cotizantes.destroy');
+        });
+
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | 👤 RUTAS ACCESIBLES PARA TODOS LOS ROLES (admin, empresa, usuario, invitado)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['rol:admin,empresa,usuario,invitado'])->group(function () {
+
+        // EMPRESA LOCAL
+        Route::prefix('empresa_local')->group(function () {
+            Route::get('/', [EmpresaLocalController::class, 'index'])->name('empresa_local');
+            Route::get('/create', [EmpresaLocalController::class, 'create'])->name('empresa_local.create');
+            Route::post('/store', [EmpresaLocalController::class, 'store'])->name('empresa_local.store');
+            Route::get('/show/{empresa}', [EmpresaLocalController::class, 'show'])->name('empresa_local.show');
+            Route::delete('/destroy/{empresa}', [EmpresaLocalController::class, 'destroy'])->name('empresa_local.destroy');
+            Route::get('/edit/{empresa}', [EmpresaLocalController::class, 'edit'])->name('empresa_local.edit');
+            Route::put('/update/{empresa}', [EmpresaLocalController::class, 'update'])->name('empresa_local.update');
+        });
+
+        // EMPRESAS EXTERNAS
+        Route::prefix('empresa_externas')->group(function () {
+            Route::get('/', [EmpresaExternaController::class, 'index'])->name('empresa_externas');
+            Route::get('/create', [EmpresaExternaController::class, 'create'])->name('empresa_externas.create');
+            Route::post('/store', [EmpresaExternaController::class, 'store'])->name('empresa_externas.store');
+            Route::get('/show/{empresa_externa}', [EmpresaExternaController::class, 'show'])->name('empresa_externas.show');
+            Route::delete('/destroy/{empresa_externa}', [EmpresaExternaController::class, 'destroy'])->name('empresa_externas.destroy');
+            Route::get('/edit/{empresa_externa}', [EmpresaExternaController::class, 'edit'])->name('empresa_externas.edit');
+            Route::put('/update/{empresa_externa}', [EmpresaExternaController::class, 'update'])->name('empresa_externas.update');
+        });
+
+        // USUARIOS EXTERNOS
+        Route::prefix('usuario_externos')->group(function () {
+            Route::get('/', [UsuarioExternoController::class, 'index'])->name('usuario_externos');
+            Route::get('/create', [UsuarioExternoController::class, 'create'])->name('usuario_externos.create');
+            Route::post('/store', [UsuarioExternoController::class, 'store'])->name('usuario_externos.store');
+            Route::get('/show/{usuario_externo}', [UsuarioExternoController::class, 'show'])->name('usuario_externos.show');
+            Route::get('/edit/{usuario_externo}', [UsuarioExternoController::class, 'edit'])->name('usuario_externos.edit');
+            Route::put('/update/{usuario_externo}', [UsuarioExternoController::class, 'update'])->name('usuario_externos.update');
+            Route::delete('/destroy/{usuario_externo}', [UsuarioExternoController::class, 'destroy'])->name('usuario_externos.destroy');
+
+            Route::get('/activos', [UsuarioExternoController::class, 'activos'])->name('usuario_externos.activos');
+            Route::post('/import-csv', [UsuarioExternoController::class, 'importCsv'])->name('usuario_externos.importCsv');
+
+            // Descargar plantilla de importación
+            Route::get('/plantilla', [UsuarioExternoImportController::class, 'downloadTemplate'])
+                ->name('usuario_externos.template');
+
+            Route::get('/usuario_externos/import', [UsuarioExternoImportController::class, 'showForm'])
+                ->name('usuario_externos.import');
+            Route::post('/usuario_externos/import', [UsuarioExternoImportController::class, 'import'])
+                ->name('usuario_externos.import.do');
+        });
+
+        // REMISIONES
+        Route::prefix('remisiones')->group(function () {
+            Route::get('/', [RemisionController::class, 'index'])->name('remisiones');
+            Route::get('/create', [RemisionController::class, 'create'])->name('remisiones.create');
+            Route::post('/store', [RemisionController::class, 'store'])->name('remisiones.store');
+            Route::get('/show/{remision}', [RemisionController::class, 'show'])->name('remisiones.show');
+            Route::delete('/destroy/{remision}', [RemisionController::class, 'destroy'])->name('remisiones.destroy');
+            Route::get('/edit/{remision}', [RemisionController::class, 'edit'])->name('remisiones.edit');
+            Route::put('/update/{remision}', [RemisionController::class, 'update'])->name('remisiones.update');
+            Route::get('/{id}/imprimir', [RemisionController::class, 'imprimir'])->name('remisiones.imprimir');
+            Route::get('/api/por-periodo', [RemisionController::class, 'apiListByPeriod'])
+                ->name('remisiones.api.period');
+        });
+
+        // ASESORES
+        Route::prefix('asesores')->group(function () {
+            Route::get('/asesores', [AsesorController::class, 'index'])->name('asesores');
+            Route::get('/asesores/create', [AsesorController::class, 'create'])->name('asesores.create');
+            Route::post('/asesores', [AsesorController::class, 'store'])->name('asesores.store');
+            Route::get('/asesores/{asesor}/edit', [AsesorController::class, 'edit'])->name('asesores.edit');
+            Route::put('/asesores/{asesor}', [AsesorController::class, 'update'])->name('asesores.update');
+            Route::delete('/asesores/{asesor}', [AsesorController::class, 'destroy'])->name('asesores.destroy');
+        });
+
+        // INCAPACIDADES
+        Route::prefix('incapacidades')->name('incapacidades.')->group(function () {
+            Route::get('/', [IncapacidadController::class, 'index'])->name('index');
+            Route::get('/crear', [IncapacidadController::class, 'create'])->name('create');
+            Route::post('/guardar', [IncapacidadController::class, 'store'])->name('store');
+            Route::get('/{incapacidad}/editar', [IncapacidadController::class, 'edit'])->name('edit');
+            Route::put('/{incapacidad}', [IncapacidadController::class, 'update'])->name('update');
+            Route::delete('/{incapacidad}', [IncapacidadController::class, 'destroy'])->name('destroy');
+
+            // Acciones adicionales
+            Route::post('/{incapacidad}/cerrar', [IncapacidadController::class, 'cerrar'])->name('cerrar');
+            Route::post('/buscar-usuario', [IncapacidadController::class, 'buscarUsuario'])->name('buscarUsuario');
+            Route::post('/{incapacidad}/observaciones', [IncapacidadController::class, 'agregarObservacion'])->name('observaciones.agregar');
+        });
+
+        // PLANES
+        Route::get('/planes', [PlanesController::class, 'index'])->name('planes.index');
+
+        // ARL-USUARIOS
+        Route::prefix('arl-usuarios')->as('arl-usuarios.')->group(function () {
+            Route::get('/export', [ArlUsuarioController::class, 'export'])->name('export');
+
+            Route::get('/', [ArlUsuarioController::class, 'index'])->name('index');
+            Route::get('/create', [ArlUsuarioController::class, 'create'])->name('create');
+            Route::post('/', [ArlUsuarioController::class, 'store'])->name('store');
+            Route::get('/{arlUsuario}/edit', [ArlUsuarioController::class, 'edit'])->name('edit');
+            Route::put('/{arlUsuario}', [ArlUsuarioController::class, 'update'])->name('update');
+            Route::delete('/{arlUsuario}', [ArlUsuarioController::class, 'destroy'])->name('destroy');
+        });
+
+        // EMPRESA CLAVES
+        Route::prefix('empresa-claves')->as('empresa-claves.')->group(function () {
+            Route::get('/', [EmpresaClaveController::class, 'index'])->name('index');
+            Route::get('/create', [EmpresaClaveController::class, 'create'])->name('create');
+            Route::post('/', [EmpresaClaveController::class, 'store'])->name('store');
+            Route::get('/{empresaClave}/edit', [EmpresaClaveController::class, 'edit'])->name('edit');
+            Route::put('/{empresaClave}', [EmpresaClaveController::class, 'update'])->name('update');
+            Route::delete('/{empresaClave}', [EmpresaClaveController::class, 'destroy'])->name('destroy');
+        });
+
+        // SERVICIOS EXTERNOS
+        Route::prefix('servicios-externos')->as('servicios-externos.')->group(function () {
+            Route::get('/', [ServicioExternoController::class, 'index'])->name('index');
+            Route::get('/create', [ServicioExternoController::class, 'create'])->name('create');
+            Route::post('/', [ServicioExternoController::class, 'store'])->name('store');
+            Route::get('/{servicioExterno}/edit', [ServicioExternoController::class, 'edit'])->name('edit');
+            Route::put('/{servicioExterno}', [ServicioExternoController::class, 'update'])->name('update');
+            Route::delete('/{servicioExterno}', [ServicioExternoController::class, 'destroy'])->name('destroy');
+        });
+
     
-    });
-});
 
-/*
-|--------------------------------------------------------------------------
-| 🔐 RUTAS SOLO PARA ADMIN O EMPRESA
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['rol:admin,empresa'])->group(function () {
-
-    // USUARIOS
-    Route::prefix('usuarios')->group(function () {
-        Route::get('/', [usuarios::class, 'index'])->name('usuarios');
-        Route::get('/create', [usuarios::class, 'create'])->name('usuarios.create');
-        Route::post('/store', [usuarios::class, 'store'])->name('usuarios.store');
-        Route::get('/show/{id}', [usuarios::class, 'show'])->name('usuarios.show');
-        Route::delete('/destroy/{id}', [usuarios::class, 'destroy'])->name('usuarios.destroy');
-        Route::get('/edit/{id}', [usuarios::class, 'edit'])->name('usuarios.edit');
-        Route::put('/update/{id}', [usuarios::class, 'update'])->name('usuarios.update');
-        Route::get('/tbody', [usuarios::class, 'tbody'])->name('usuarios.tbody');
-        Route::get('/cambiar-estado/{id}/{estado}', [usuarios::class, 'estado'])->name('usuarios.estado');
-        Route::get('/cambiar-password/{id}/{password}', [usuarios::class, 'cambio_password'])->name('usuarios.password');
+        Route::get('/empresa-claves/resumen', [EmpresaClaveController::class, 'resumen'])->name('empresa-claves.resumen');
     });
 
-    // DOCUMENTOS
-    Route::prefix('documentos')->group(function () {
-        Route::get('/', [DocumentoController::class, 'index'])->name('documentos');
-        Route::get('/create', [DocumentoController::class, 'create'])->name('documentos.create');
-        Route::post('/store', [DocumentoController::class, 'store'])->name('documentos.store');
-        Route::get('/show/{documento}', [DocumentoController::class, 'show'])->name('documentos.show');
-        Route::delete('/destroy/{documento}', [DocumentoController::class, 'destroy'])->name('documentos.destroy');
-        Route::get('/edit/{documento}', [DocumentoController::class, 'edit'])->name('documentos.edit');
-        Route::put('/update/{documento}', [DocumentoController::class, 'update'])->name('documentos.update');
-    });
-
-    // ARLS
-    Route::prefix('arls')->group(function () {
-        Route::get('/', [ArlController::class, 'index'])->name('arls');
-        Route::get('/create', [ArlController::class, 'create'])->name('arls.create');
-        Route::post('/store', [ArlController::class, 'store'])->name('arls.store');
-        Route::get('/show/{arl}', [ArlController::class, 'show'])->name('arls.show');
-        Route::delete('/destroy/{arl}', [ArlController::class, 'destroy'])->name('arls.destroy');
-        Route::get('/edit/{arl}', [ArlController::class, 'edit'])->name('arls.edit');
-        Route::put('/update/{arl}', [ArlController::class, 'update'])->name('arls.update');
-    });
-
-    // EPS
-    Route::prefix('eps')->group(function () {
-        Route::get('/', [EpsController::class, 'index'])->name('eps');
-        Route::get('/create', [EpsController::class, 'create'])->name('eps.create');
-        Route::post('/store', [EpsController::class, 'store'])->name('eps.store');
-        Route::get('/show/{eps}', [EpsController::class, 'show'])->name('eps.show');
-        Route::delete('/destroy/{eps}', [EpsController::class, 'destroy'])->name('eps.destroy');
-        Route::get('/edit/{eps}', [EpsController::class, 'edit'])->name('eps.edit');
-        Route::put('/update/{eps}', [EpsController::class, 'update'])->name('eps.update');
-    });
-
-    // PENSIONES
-    Route::prefix('pensions')->group(function () {
-        Route::get('/', [PensionController::class, 'index'])->name('pensions');
-        Route::get('/create', [PensionController::class, 'create'])->name('pensions.create');
-        Route::post('/store', [PensionController::class, 'store'])->name('pensions.store');
-        Route::get('/show/{pension}', [PensionController::class, 'show'])->name('pensions.show');
-        Route::delete('/destroy/{pension}', [PensionController::class, 'destroy'])->name('pensions.destroy');
-        Route::get('/edit/{pension}', [PensionController::class, 'edit'])->name('pensions.edit');
-        Route::put('/update/{pension}', [PensionController::class, 'update'])->name('pensions.update');
-    });
-
-    // CAJAS
-    Route::prefix('cajas')->group(function () {
-        Route::get('/', [CajaController::class, 'index'])->name('cajas');
-        Route::get('/create', [CajaController::class, 'create'])->name('cajas.create');
-        Route::post('/store', [CajaController::class, 'store'])->name('cajas.store');
-        Route::get('/edit/{caja}', [CajaController::class, 'edit'])->name('cajas.edit');
-        Route::put('/update/{caja}', [CajaController::class, 'update'])->name('cajas.update');
-        Route::delete('/destroy/{caja}', [CajaController::class, 'destroy'])->name('cajas.destroy');
-    });
-
-    // FACTURAS
-    Route::prefix('facturas')->group(function () {
-        Route::get('/', [FacturaController::class, 'index'])->name('facturas');
-        Route::get('/create', [FacturaController::class, 'create'])->name('facturas.create');
-        Route::post('/store', [FacturaController::class, 'store'])->name('facturas.store');
-        Route::get('/show/{factura}', [FacturaController::class, 'show'])->name('facturas.show');
-        Route::get('/edit/{factura}', [FacturaController::class, 'edit'])->name('facturas.edit');
-        Route::put('/update/{factura}', [FacturaController::class, 'update'])->name('facturas.update');
-        Route::delete('/destroy/{factura}', [FacturaController::class, 'destroy'])->name('facturas.destroy');
-        Route::get('/{id}/imprimir', [FacturaController::class, 'imprimir'])->name('facturas.imprimir');
-
-        Route::post('/{factura}/enviar', [FacturaDianController::class, 'enviar'])->name('facturas.enviar');
-    });
-
-    // PRODUCTOS
-    Route::prefix('productos')->group(function () {
-        Route::get('/', [ProductoController::class, 'index'])->name('productos');
-        Route::get('/create', [ProductoController::class, 'create'])->name('productos.create');
-        Route::post('/store', [ProductoController::class, 'store'])->name('productos.store');
-        Route::get('/show/{producto}', [ProductoController::class, 'show'])->name('productos.show');
-        Route::get('/edit/{producto}', [ProductoController::class, 'edit'])->name('productos.edit');
-        Route::put('/update/{producto}', [ProductoController::class, 'update'])->name('productos.update');
-        Route::delete('/destroy/{producto}', [ProductoController::class, 'destroy'])->name('productos.destroy');
-    });
-
-    // VALORES
-    Route::prefix('valores')->group(function () {
-        Route::get('/valores', [ValorController::class, 'index'])->name('valores.index');
-        Route::get('/valores/crear', [ValorController::class, 'create'])->name('valores.create');
-        Route::post('/valores', [ValorController::class, 'store'])->name('valores.store');
-        Route::get('/valores/{valor}/editar', [ValorController::class, 'edit'])->name('valores.edit');
-        Route::put('/valores/{valor}', [ValorController::class, 'update'])->name('valores.update');
-        Route::delete('/valores/{valor}', [ValorController::class, 'destroy'])->name('valores.destroy');
-    });
-
-    // SUBTIPOS COTIZANTE
-    Route::prefix('subtipos')->group(function () {
-        Route::get('/', [SubtipoCotizanteController::class, 'index'])->name('subtipo_cotizantes');
-        Route::get('/create', [SubtipoCotizanteController::class, 'create'])->name('subtipo_cotizantes.create');
-        Route::post('/', [SubtipoCotizanteController::class, 'store'])->name('subtipo_cotizantes.store');
-        Route::get('/{subtipo_cotizante}/edit', [SubtipoCotizanteController::class, 'edit'])->name('subtipo_cotizantes.edit');
-        Route::put('/{subtipo_cotizante}', [SubtipoCotizanteController::class, 'update'])->name('subtipo_cotizantes.update');
-        Route::delete('/{subtipo_cotizante}', [SubtipoCotizanteController::class, 'destroy'])->name('subtipo_cotizantes.destroy');
-    });
-});
-
-/*
-|--------------------------------------------------------------------------
-| 👤 RUTAS ACCESIBLES PARA TODOS (admin, empresa, usuario, invitado)
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['rol:admin,empresa,usuario,invitado'])->group(function () {
-
-    // EMPRESA LOCAL
-    Route::prefix('empresa_local')->group(function () {
-        Route::get('/', [EmpresaLocalController::class, 'index'])->name('empresa_local');
-        Route::get('/create', [EmpresaLocalController::class, 'create'])->name('empresa_local.create');
-        Route::post('/store', [EmpresaLocalController::class, 'store'])->name('empresa_local.store');
-        Route::get('/show/{empresa}', [EmpresaLocalController::class, 'show'])->name('empresa_local.show');
-        Route::delete('/destroy/{empresa}', [EmpresaLocalController::class, 'destroy'])->name('empresa_local.destroy');
-        Route::get('/edit/{empresa}', [EmpresaLocalController::class, 'edit'])->name('empresa_local.edit');
-        Route::put('/update/{empresa}', [EmpresaLocalController::class, 'update'])->name('empresa_local.update');
-    });
-
-    // EMPRESAS EXTERNAS
-    Route::prefix('empresa_externas')->group(function () {
-        Route::get('/', [EmpresaExternaController::class, 'index'])->name('empresa_externas');
-        Route::get('/create', [EmpresaExternaController::class, 'create'])->name('empresa_externas.create');
-        Route::post('/store', [EmpresaExternaController::class, 'store'])->name('empresa_externas.store');
-        Route::get('/show/{empresa_externa}', [EmpresaExternaController::class, 'show'])->name('empresa_externas.show');
-        Route::delete('/destroy/{empresa_externa}', [EmpresaExternaController::class, 'destroy'])->name('empresa_externas.destroy');
-        Route::get('/edit/{empresa_externa}', [EmpresaExternaController::class, 'edit'])->name('empresa_externas.edit');
-        Route::put('/update/{empresa_externa}', [EmpresaExternaController::class, 'update'])->name('empresa_externas.update');
-    });
-
-    // USUARIOS EXTERNOS
-    Route::prefix('usuario_externos')->group(function () {
-        Route::get('/', [UsuarioExternoController::class, 'index'])->name('usuario_externos');
-        Route::get('/create', [UsuarioExternoController::class, 'create'])->name('usuario_externos.create');
-        Route::post('/store', [UsuarioExternoController::class, 'store'])->name('usuario_externos.store');
-        Route::get('/show/{usuario_externo}', [UsuarioExternoController::class, 'show'])->name('usuario_externos.show');
-        Route::get('/edit/{usuario_externo}', [UsuarioExternoController::class, 'edit'])->name('usuario_externos.edit');
-        Route::put('/update/{usuario_externo}', [UsuarioExternoController::class, 'update'])->name('usuario_externos.update');
-        Route::delete('/destroy/{usuario_externo}', [UsuarioExternoController::class, 'destroy'])->name('usuario_externos.destroy');
-
-        Route::get('/activos', [UsuarioExternoController::class, 'activos'])->name('usuario_externos.activos');
-        Route::post('/import-csv', [UsuarioExternoController::class, 'importCsv'])->name('usuario_externos.importCsv');
-
-        // Descargar plantilla de importación
-        Route::get('/plantilla', [UsuarioExternoImportController::class, 'downloadTemplate'])
-            ->name('usuario_externos.template');
-
-        Route::get('/usuario_externos/import', [UsuarioExternoImportController::class, 'showForm'])
-            ->name('usuario_externos.import');
-        Route::post('/usuario_externos/import', [UsuarioExternoImportController::class, 'import'])
-            ->name('usuario_externos.import.do');
-    });
-
-    // REMISIONES
-    Route::prefix('remisiones')->group(function () {
-        Route::get('/', [RemisionController::class, 'index'])->name('remisiones');
-        Route::get('/create', [RemisionController::class, 'create'])->name('remisiones.create');
-        Route::post('/store', [RemisionController::class, 'store'])->name('remisiones.store');
-        Route::get('/show/{remision}', [RemisionController::class, 'show'])->name('remisiones.show');
-        Route::delete('/destroy/{remision}', [RemisionController::class, 'destroy'])->name('remisiones.destroy');
-        Route::get('/edit/{remision}', [RemisionController::class, 'edit'])->name('remisiones.edit');
-        Route::put('/update/{remision}', [RemisionController::class, 'update'])->name('remisiones.update');
-        Route::get('/{id}/imprimir', [RemisionController::class, 'imprimir'])->name('remisiones.imprimir');
-        Route::get('/api/por-periodo', [RemisionController::class, 'apiListByPeriod'])
-            ->name('remisiones.api.period');
-    });
-
-    // ASESORES
-    Route::prefix('asesores')->group(function () {
-        Route::get('/asesores', [AsesorController::class, 'index'])->name('asesores');
-        Route::get('/asesores/create', [AsesorController::class, 'create'])->name('asesores.create');
-        Route::post('/asesores', [AsesorController::class, 'store'])->name('asesores.store');
-        Route::get('/asesores/{asesor}/edit', [AsesorController::class, 'edit'])->name('asesores.edit');
-        Route::put('/asesores/{asesor}', [AsesorController::class, 'update'])->name('asesores.update');
-        Route::delete('/asesores/{asesor}', [AsesorController::class, 'destroy'])->name('asesores.destroy');
-    });
-
-    // INCAPACIDADES
-    Route::prefix('incapacidades')->name('incapacidades.')->group(function () {
-        Route::get('/', [IncapacidadController::class, 'index'])->name('index');
-        Route::get('/crear', [IncapacidadController::class, 'create'])->name('create');
-        Route::post('/guardar', [IncapacidadController::class, 'store'])->name('store');
-        Route::get('/{incapacidad}/editar', [IncapacidadController::class, 'edit'])->name('edit');
-        Route::put('/{incapacidad}', [IncapacidadController::class, 'update'])->name('update');
-        Route::delete('/{incapacidad}', [IncapacidadController::class, 'destroy'])->name('destroy');
-
-        // Acciones adicionales
-        Route::post('/{incapacidad}/cerrar', [IncapacidadController::class, 'cerrar'])->name('cerrar');
-        Route::post('/buscar-usuario', [IncapacidadController::class, 'buscarUsuario'])->name('buscarUsuario');
-        Route::post('/{incapacidad}/observaciones', [IncapacidadController::class, 'agregarObservacion'])->name('observaciones.agregar');
-    });
-
-    // PLANES
-    Route::get('/planes', [PlanesController::class, 'index'])->name('planes.index');
-
-   // ARL-USUARIOS
-Route::prefix('arl-usuarios')->as('arl-usuarios.')->group(function () {
-    // 👇 Export debe ser /export y el name solo 'export'
-    Route::get('/export', [ArlUsuarioController::class, 'export'])->name('export');
-
-    Route::get('/', [ArlUsuarioController::class, 'index'])->name('index');
-    Route::get('/create', [ArlUsuarioController::class, 'create'])->name('create');
-    Route::post('/', [ArlUsuarioController::class, 'store'])->name('store');
-    Route::get('/{arlUsuario}/edit', [ArlUsuarioController::class, 'edit'])->name('edit');
-    Route::put('/{arlUsuario}', [ArlUsuarioController::class, 'update'])->name('update');
-    Route::delete('/{arlUsuario}', [ArlUsuarioController::class, 'destroy'])->name('destroy');
-});
-
-
-    // EMPRESA CLAVES
-    Route::prefix('empresa-claves')->as('empresa-claves.')->group(function () {
-        Route::get('/', [EmpresaClaveController::class, 'index'])->name('index');
-        Route::get('/create', [EmpresaClaveController::class, 'create'])->name('create');
-        Route::post('/', [EmpresaClaveController::class, 'store'])->name('store');
-        Route::get('/{empresaClave}/edit', [EmpresaClaveController::class, 'edit'])->name('edit');
-        Route::put('/{empresaClave}', [EmpresaClaveController::class, 'update'])->name('update');
-        Route::delete('/{empresaClave}', [EmpresaClaveController::class, 'destroy'])->name('destroy');
-    });
-
-    // SERVICIOS EXTERNOS
-    Route::prefix('servicios-externos')->as('servicios-externos.')->group(function () {
-        Route::get('/', [ServicioExternoController::class, 'index'])->name('index');
-        Route::get('/create', [ServicioExternoController::class, 'create'])->name('create');
-        Route::post('/', [ServicioExternoController::class, 'store'])->name('store');
-        Route::get('/{servicioExterno}/edit', [ServicioExternoController::class, 'edit'])->name('edit');
-        Route::put('/{servicioExterno}', [ServicioExternoController::class, 'update'])->name('update');
-        Route::delete('/{servicioExterno}', [ServicioExternoController::class, 'destroy'])->name('destroy');
-    });
-
-    Route::get('/empresa-claves/resumen', [EmpresaClaveController::class, 'resumen'])->name('empresa-claves.resumen');
 });
