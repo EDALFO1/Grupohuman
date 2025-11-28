@@ -58,6 +58,9 @@ Route::get('/cambiar-empresa', function () {
     session()->forget('empresa_local_id');
     return redirect()->route('seleccionar.empresa');
 })->name('cambiar.empresa');
+Route::middleware('auth')->group(function () {
+    Route::resource('notas', NotaController::class)->except(['show']);
+});
 
 /*
 |--------------------------------------------------------------------------

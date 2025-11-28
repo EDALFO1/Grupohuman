@@ -10,7 +10,16 @@
 
   <nav class="header-nav ms-auto">
     <ul class="d-flex align-items-center">
-
+     
+      {{-- BOTÓN NOTAS (GLOBAL) --}}
+<li class="nav-item me-4">
+  <a href="{{ route('notas.index') }}" 
+    class="btn d-flex align-items-center text-white px-3" 
+    style="background: linear-gradient(90deg, #28a745, #5cd08d);">
+    <i class="bi bi-stickies-fill me-2 fs-5"></i>
+    <span>Notas</span>
+  </a>
+</li>
     
 
       {{-- BOTÓN PLANES --}}
