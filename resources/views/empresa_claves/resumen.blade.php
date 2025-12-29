@@ -11,7 +11,16 @@
   <section class="section">
     <div class="card">
       <div class="card-body">
-        <h5 class="card-title">Claves por Empresa</h5>
+        
+        <div class="d-flex justify-content-between align-items-center mb-3">
+
+
+  <a href="{{ route('empresa-claves.create', ['empresa_id' => $empresaId]) }}"
+     class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Nueva Clave
+  </a>
+</div>
+
 
         {{-- 🔍 FILTRO --}}
         <form method="GET" action="{{ route('empresa-claves.resumen') }}" class="row g-3 align-items-end mb-4">
@@ -44,48 +53,67 @@
                 <div class="table-responsive">
                   <table class="table table-striped mb-0">
                     <thead>
-                      <tr>
-                        <th>Servicio</th>
-                        <th>Usuario</th>
-                        <th>Correo Registrado</th>
-                        <th>Contraseña</th>
-                        <th>URL</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @foreach ($empresa->claves as $clave)
-                        <tr>
-                          <td>{{ $clave->servicio->nombre ?? '—' }}</td>
-                          <td>{{ $clave->usuario ?? '—' }}</td>
-                          <td>{{ $clave->correo_registrado ?? '—' }}</td>
+  <tr>
+    <th>Servicio</th>
+    <th>Usuario</th>
+    <th>Correo Registrado</th>
+    <th>Contraseña</th>
+    <th>URL</th>
+    <th>Acciones</th>
+  </tr>
+</thead>
+                   <tbody>
+  @foreach ($empresa->claves as $clave)
+    <tr>
+      <td>{{ $clave->servicio->nombre ?? '—' }}</td>
+      <td>{{ $clave->usuario ?? '—' }}</td>
+      <td>{{ $clave->correo_registrado ?? '—' }}</td>
 
-                          {{-- 🔐 CONTRASEÑA --}}
-                          <td>
-                            <div class="input-group input-group-sm">
-                              <input type="password" readonly class="form-control password-field"
-                                     value="{{ $clave->password ?? '' }}">
-                              <button type="button" class="btn btn-outline-secondary toggle-password" title="Mostrar contraseña">
-                                <i class="fa-solid fa-eye"></i>
-                              </button>
-                              <button type="button" class="btn btn-outline-secondary copy-password" title="Copiar contraseña">
-                                <i class="fa-solid fa-copy"></i>
-                              </button>
-                            </div>
-                          </td>
+      {{-- 🔐 CONTRASEÑA --}}
+      <td>
+        <div class="input-group input-group-sm">
+          <input type="password" readonly class="form-control password-field"
+                 value="{{ $clave->password ?? '' }}">
+          <button type="button" class="btn btn-outline-secondary toggle-password" title="Mostrar contraseña">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+          <button type="button" class="btn btn-outline-secondary copy-password" title="Copiar contraseña">
+            <i class="fa-solid fa-copy"></i>
+          </button>
+        </div>
+      </td>
 
-                          {{-- 🌐 URL --}}
-                          <td>
-                            @if (!empty($clave->servicio->url))
-                              <a href="{{ $clave->servicio->url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="fa-solid fa-link"></i> Ir
-                              </a>
-                            @else
-                              <span class="text-muted">—</span>
-                            @endif
-                          </td>
-                        </tr>
-                      @endforeach
-                    </tbody>
+      {{-- 🌐 URL --}}
+      <td>
+        @if (!empty($clave->servicio->url))
+          <a href="{{ $clave->servicio->url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+            <i class="fa-solid fa-link"></i> Ir
+          </a>
+        @else
+          <span class="text-muted">—</span>
+        @endif
+      </td>
+
+      {{-- 🛠 ACCIONES --}}
+      <td class="d-flex gap-2">
+        <a href="{{ route('empresa-claves.edit', $clave) }}" 
+           class="btn btn-warning btn-sm" title="Editar">
+          <i class="bi bi-pencil-square"></i>
+        </a>
+
+        <form action="{{ route('empresa-claves.destroy', $clave) }}" method="POST"
+              onsubmit="return confirm('¿Deseas eliminar esta clave?')">
+          @csrf
+          @method('DELETE')
+          <button class="btn btn-danger btn-sm" title="Eliminar">
+            <i class="bi bi-trash"></i>
+          </button>
+        </form>
+      </td>
+    </tr>
+  @endforeach
+</tbody>
+
                   </table>
                 </div>
               @endif

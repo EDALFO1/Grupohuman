@@ -125,11 +125,7 @@
       <ul id="productos-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
 
     
-       <li>
-          <a href="{{ route ('empresa-claves.index')}}">
-            <i class="bi bi-send" style="font-size: 1em;"></i><span>Claves</span>
-          </a>
-        </li>
+      
 
 
         <li>
