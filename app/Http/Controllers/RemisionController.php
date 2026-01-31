@@ -60,7 +60,7 @@ class RemisionController extends Controller
 {
     $validated = $request->validate([
         'usuario_externo_id' => 'required|exists:usuario_externos,id',
-        'fecha'              => 'required|date',
+        'fecha'              => 'required|date|after_or_equal:1900-01-01', // ✅ permite futuro
         'novedad'            => 'required|in:Ingreso,Retiro',
         'fecha_retiro'       => 'nullable|date|after_or_equal:1900-01-01',
         'otros_servicios'    => 'required|numeric|min:0',
@@ -200,7 +200,7 @@ class RemisionController extends Controller
 {
     $validated = $request->validate([
         'usuario_externo_id' => 'required|exists:usuario_externos,id',
-        'fecha'              => 'required|date',
+        'fecha'              => 'required|date|after_or_equal:1900-01-01', // ✅ permite futuro
         'novedad'            => 'required|in:Ingreso,Retiro',
         'fecha_retiro'       => 'nullable|date|after_or_equal:1900-01-01',
         'otros_servicios'    => 'required|numeric|min:0',

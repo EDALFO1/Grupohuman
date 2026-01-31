@@ -210,7 +210,8 @@
       $fmt = fn($n) => '$'.number_format((float)$n, 0, ',', '.');
 
       $fecha = $remision->fecha instanceof Carbon ? $remision->fecha : Carbon::parse($remision->fecha);
-      $periodo = $fecha->copy()->subMonthNoOverflow()->format('m/Y');
+      $periodo = $fecha->copy()->addMonthNoOverflow()->format('m/Y');
+
 
       $docTipo = $u?->documento?->nombre ?? 'Documento';
       $docNum  = $u?->numero ?? '';

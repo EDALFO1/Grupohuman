@@ -2,8 +2,8 @@
 
 return [
     // Ajusta estos dos valores cada año:
-    'smmlv' => env('PLANES_SMMLV', 1423500),   // Salario mínimo
-    'admin' => env('PLANES_ADMIN', 48000),     // Administración fija
+    'smmlv' => env('PLANES_SMMLV', 1751000),   // Salario mínimo
+    'admin' => env('PLANES_ADMIN', 58000),     // Administración fija
 
     // Porcentajes fijos
     'porcentajes' => [

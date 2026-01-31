@@ -98,6 +98,10 @@ Route::middleware(['auth', SeleccionarEmpresaMiddleware::class])->group(function
             ->name('recibos.retirosMasivos.form');
         Route::post('/retiros-masivos', [ReciboController::class, 'retirosMasivosExport'])
             ->name('recibos.retirosMasivos.export');
+
+    Route::post('/liquidacion/preview', [\App\Http\Controllers\LiquidacionPreviewController::class, 'preview'])
+    ->name('liquidacion.preview');
+        
     });
 
     // ========================= RECIBOS (CRUD) =========================
