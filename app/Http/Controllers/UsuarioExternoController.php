@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\UsuarioExternosTemplateExport;
-
+use App\Exports\UsuarioExternosExport;
 
 
 
@@ -278,6 +278,10 @@ private function extractDriveFolderId(string $input): string
             'recibo_id' => null, // aún no hay recibo; quedará null
         ]
     );
+}
+public function export()
+{
+    return Excel::download(new UsuarioExternosExport, 'usuarios_externos.xlsx');
 }
 
 }

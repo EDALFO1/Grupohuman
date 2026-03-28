@@ -149,6 +149,9 @@ Route::middleware(['auth', SeleccionarEmpresaMiddleware::class])->group(function
         // Descargar por caja directo (lo que usa el <form method="POST">)
         Route::post('/descargar-por-caja', [LiquidacionesExcelController::class, 'descargarPorCaja'])
             ->name('exportaciones.descargarPorCaja');
+
+        Route::get('/usuario-externos/export', [UsuarioExternoController::class, 'export'])
+            ->name('usuario_externos.export');
     });
 
     /*

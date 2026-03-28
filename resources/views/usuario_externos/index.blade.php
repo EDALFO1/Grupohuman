@@ -74,6 +74,9 @@
                                 <a href="{{ route('usuario_externos.template') }}" class="btn btn-secondary">
                                     Descargar plantilla
                                 </a>
+                                <a href="{{ route('usuario_externos.export') }}" class="btn btn-success">
+                                    Exportar Excel
+                                </a>
                             </div>
                         </div>
 
